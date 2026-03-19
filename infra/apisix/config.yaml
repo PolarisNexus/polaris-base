@@ -1,0 +1,33 @@
+# APISIX Standalone 模式声明式路由配置
+# 文档: https://apisix.apache.org/docs/apisix/deployment-modes/#standalone
+#
+# 此文件挂载到容器 /usr/local/apisix/conf/apisix.yaml
+# 修改后 APISIX 自动热加载，无需重启
+
+routes:
+  # ---------- 健康检查 ----------
+  - id: health
+    uri: /health
+    upstream:
+      type: roundrobin
+      nodes:
+        "127.0.0.1:1980": 1
+    plugins:
+      public-api: {}
+
+  # ---------- 示例：产品服务路由（占位） ----------
+  # - id: example-service
+  #   uri: /api/example/*
+  #   upstream:
+  #     type: roundrobin
+  #     nodes:
+  #       "example-service:8080": 1
+  #   plugins:
+  #     jwt-auth: {}
+  #     limit-req:
+  #       rate: 100
+  #       burst: 50
+  #       key_type: var
+  #       key: remote_addr
+
+#END
