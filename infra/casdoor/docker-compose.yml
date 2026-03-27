@@ -1,0 +1,19 @@
+services:
+  casdoor:
+    image: casbin/casdoor:latest
+    container_name: polaris-base-casdoor
+    restart: unless-stopped
+    environment:
+      RUNNING_IN_DOCKER: "true"
+      driverName: postgres
+      dataSourceName: "user=${POSTGRES_USER:-polaris} password=${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required} host=polaris-postgres port=5432 sslmode=disable dbname=${CASDOOR_DB:-casdoor}"
+    ports:
+      - "${CASDOOR_PORT:-8000}:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsSL http://localhost:8000/api/health || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 5

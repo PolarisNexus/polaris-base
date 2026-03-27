@@ -1,0 +1,7 @@
+# APISIX 主配置 — 启用 Standalone 模式（不依赖 etcd）
+# 挂载到 /usr/local/apisix/conf/config.yaml
+
+deployment:
+  role: data_plane
+  role_data_plane:
+    config_provider: yaml

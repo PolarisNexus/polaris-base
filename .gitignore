@@ -59,6 +59,8 @@ Icon
 *.pem
 *.key
 *.cert
+.env
 *.sqlite3
 *.db
 docker-compose.override.yml
+docker-compose.full.yml

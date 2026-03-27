@@ -15,6 +15,17 @@ routes:
     plugins:
       public-api: {}
 
+  # ---------- Casdoor ----------
+  - id: casdoor
+    uri: /casdoor/*
+    upstream:
+      type: roundrobin
+      nodes:
+        "polaris-casdoor:8000": 1
+    plugins:
+      proxy-rewrite:
+        regex_uri: ["^/casdoor/(.*)", "/$1"]
+
   # ---------- 示例：产品服务路由（占位） ----------
   # - id: example-service
   #   uri: /api/example/*
