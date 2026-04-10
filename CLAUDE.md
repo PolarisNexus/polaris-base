@@ -6,7 +6,7 @@ polaris-base 是 PolarisNexus 平台的**共享基座仓库**，只存放：
 
 - 跨服务 API 契约（gRPC Proto、未来的 OpenAPI 聚合）
 - 部署编排（Docker Compose / K8s）
-- 基础设施组件配置（APISIX、Casdoor、SafeLine、PG、Redis、ES、MinIO）
+- 组件配置与编排（APISIX、Casdoor、SafeLine、PG、Redis、ES、MinIO）
 - 产品矩阵索引（products/）
 - 平台级文档
 
@@ -30,6 +30,8 @@ polaris-base 是 PolarisNexus 平台的**共享基座仓库**，只存放：
 
 ## 上下文指针
 
-- 平台顶层技术栈：`docs/dev/平台顶层技术栈.md`
+- 平台顶层技术栈：`docs/architecture/平台顶层技术栈.md`
 - 部署编排入口：`deploy/docker-compose/docker-compose.yml`
-- 网关配置：`infra/apisix/config.yaml`
+- 网关路由配置：`components/apisix/apisix.yaml`
+- 网关主配置：`components/apisix/config.yaml`
+- 架构决策记录：`docs/adr/`

@@ -1,0 +1,23 @@
+services:
+  apisix:
+    image: apache/apisix:3.11.0-debian
+    container_name: polaris-base-apisix
+    restart: unless-stopped
+    volumes:
+      - ./apisix-config.yaml:/usr/local/apisix/conf/config.yaml:ro
+      - ./config.yaml:/usr/local/apisix/conf/apisix.yaml:ro
+    ports:
+      - "${APISIX_HTTP_PORT:-9080}:9080"
+      - "${APISIX_HTTPS_PORT:-9443}:9443"
+    healthcheck:
+      # 不依赖 curl/wget：通过 bash 内置 /dev/tcp 发真实 HTTP 请求并校验状态码
+      # 覆盖 TCP + HTTP 响应 + 状态码三层，避免只测端口 listen 的盲点
+      # /dev/tcp 是 bash 独有特性，CMD-SHELL 默认走 /bin/sh，所以必须显式 bash -c
+      test:
+        - "CMD"
+        - "bash"
+        - "-c"
+        - "exec 3<>/dev/tcp/localhost/9080 && printf 'GET /health HTTP/1.0\\r\\nHost: localhost\\r\\n\\r\\n' >&3 && grep -q '200 OK' <&3"
+      interval: 15s
+      timeout: 10s
+      retries: 5

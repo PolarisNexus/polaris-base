@@ -6,22 +6,25 @@
 
 routes:
   # ---------- 健康检查 ----------
+  # 使用 fault-injection 直接返回 200，不依赖任何 upstream，
+  # 供容器 healthcheck 和外部存活探测使用
   - id: health
     uri: /health
-    upstream:
-      type: roundrobin
-      nodes:
-        "127.0.0.1:1980": 1
     plugins:
-      public-api: {}
+      fault-injection:
+        abort:
+          http_status: 200
+          body: "ok\n"
 
   # ---------- Casdoor ----------
+  # 注意：upstream 使用 compose 服务名（不是 container_name），
+  # 服务名是 compose 默认网络的稳定别名，改 container_name 前缀不影响这里
   - id: casdoor
     uri: /casdoor/*
     upstream:
       type: roundrobin
       nodes:
-        "polaris-casdoor:8000": 1
+        "casdoor:8000": 1
     plugins:
       proxy-rewrite:
         regex_uri: ["^/casdoor/(.*)", "/$1"]
