@@ -6,8 +6,6 @@ services:
       - discovery.type=single-node
       - xpack.security.enabled=${ES_SECURITY_ENABLED:-false}
       - ES_JAVA_OPTS=${ES_JAVA_OPTS:--Xms512m -Xmx512m}
-    ports:
-      - "${ES_PORT:-9200}:9200"
     volumes:
       - es_data:/usr/share/elasticsearch/data
     networks:

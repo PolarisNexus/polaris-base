@@ -70,7 +70,18 @@ cp docker-compose.override.yml.prod.example docker-compose.override.yml
 docker compose up -d
 ```
 
-生产覆盖会：收敛端口到 `127.0.0.1`、开启 ES 安全、要求强密码。
+生产覆盖会：开启 ES 安全、要求强密码等。
+
+## 端口策略
+
+**只有 APISIX 网关暴露端口到宿主机**（9080/9443），其他所有服务（PG、Redis、ES、MinIO、Casdoor）均不映射端口。所有访问统一从网关入。
+
+需要直连内部服务调试时：
+
+```bash
+docker compose exec postgres psql -U polaris        # 连 PG
+docker compose exec redis redis-cli                  # 连 Redis
+```
 
 ## 数据持久化
 

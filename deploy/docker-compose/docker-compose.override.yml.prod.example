@@ -2,33 +2,9 @@
 # 使用方式: cp docker-compose.override.yml.prod.example docker-compose.override.yml
 
 services:
-  postgres:
-    ports: !reset []
-    ports:
-      - "127.0.0.1:5432:5432"
-
-  redis:
-    ports: !reset []
-    ports:
-      - "127.0.0.1:6379:6379"
-
   elasticsearch:
     environment:
       xpack.security.enabled: "true"
       ELASTIC_PASSWORD: ${ES_PASSWORD:?ES_PASSWORD required in prod}
-    ports: !reset []
-    ports:
-      - "127.0.0.1:9200:9200"
-
-  minio:
-    ports: !reset []
-    ports:
-      - "127.0.0.1:9000:9000"
-      - "127.0.0.1:9001:9001"
-
-  casdoor:
-    ports: !reset []
-    ports:
-      - "127.0.0.1:8000:8000"
 
   # APISIX 保持 9080/9443 对外，作为唯一公网入口
