@@ -1,39 +1,39 @@
-.PHONY: init up down ps logs config release clean
+.PHONY: help up up-data down ps logs config release clean
 
-ENV_FILE := .env
+help:
+	@echo "polaris-base 基座操作入口"
+	@echo "  make up          启动全部组件"
+	@echo "  make up-data     仅启动数据层（PG/Redis）"
+	@echo "  make down        停止全部"
+	@echo "  make ps          查看状态"
+	@echo "  make logs        查看日志（S=postgres 指定服务）"
+	@echo "  make config      输出完整合并配置"
+	@echo "  make release     生成单文件 docker-compose.full.yml"
+	@echo "  make clean       停止 + 删除命名卷（需二次确认）"
 
-# 首次初始化：从模板生成 .env
-init:
-	@test -f $(ENV_FILE) || (cp .env.example $(ENV_FILE) && echo "已生成 .env，请修改密码后再启动")
-	@test -f $(ENV_FILE) && echo ".env 已存在"
-
-# 启动全部组件
-up: init
+up:
 	docker compose up -d
 
-# 停止全部组件
+up-data:
+	docker compose up -d postgres redis
+
 down:
 	docker compose down
 
-# 停止并删除数据卷（危险）
-clean:
-	@echo "即将删除所有数据卷，Ctrl+C 取消"; sleep 3
-	docker compose down -v
-
-# 查看状态
 ps:
 	docker compose ps
 
-# 查看日志（可追加 S=postgres 指定服务）
 logs:
 	docker compose logs -f $(S)
 
-# 输出完整合并配置（排查用）
-config: init
+config:
 	docker compose config
 
-# 生成可发布的单文件 docker-compose.full.yml（绝对路径转相对）
 PROJECT_ROOT := $(shell cd ../.. && pwd)
-release: init
+release:
 	docker compose config | sed 's|source: $(PROJECT_ROOT)/|source: ../../|g' > docker-compose.full.yml
 	@echo "已生成 docker-compose.full.yml"
+
+clean:
+	@read -p "将 down 并删除命名卷（数据不可恢复），输入 YES 确认: " ans && [ "$$ans" = "YES" ]
+	docker compose down -v

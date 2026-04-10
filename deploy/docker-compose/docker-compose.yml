@@ -1,29 +1,25 @@
 # ==================================================
 # polaris-base 一键启动入口
-# 通过 include 引用各组件独立编排，注释掉某行即可跳过该组件
+# 通过 include 引用各组件独立编排
 #
-# 首次使用:
-#   cp .env.example .env   # 然后修改密码
-#   docker compose up -d
-#
-# 生成完整合并配置:
-#   docker compose config > docker-compose.full.yml
+# 启动: docker compose up -d
+# 裁剪: COMPOSE_PROFILES=data docker compose up -d
+# 配置: 各组件目录下 .env.example → .env 覆盖默认值
+# 分发: make -C ../../scripts release
 # ==================================================
 
 name: polaris-base
 
 include:
   # ---------- 基础设施层 ----------
-  - path: ../../infra/postgres/docker-compose.yml
-    env_file: .env
-  - path: ../../infra/redis/docker-compose.yml
-    env_file: .env
-  - path: ../../infra/elasticsearch/docker-compose.yml
-    env_file: .env
-  - path: ../../infra/minio/docker-compose.yml
-    env_file: .env
+  - path: ../../components/postgres/docker-compose.yml
+  - path: ../../components/redis/docker-compose.yml
+  - path: ../../components/elastic/elasticsearch/docker-compose.yml
+  - path: ../../components/minio/docker-compose.yml
   # ---------- 公共基座层 ----------
-  - path: ../../infra/apisix/docker-compose.yml
-    env_file: .env
-  - path: ../../infra/casdoor/docker-compose.yml
-    env_file: .env
+  - path: ../../components/apisix/docker-compose.yml
+  - path: ../../components/casdoor/docker-compose.yml
+
+networks:
+  default:
+    name: polaris-base_polaris-net

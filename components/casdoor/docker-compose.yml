@@ -1,18 +1,21 @@
 services:
   casdoor:
     image: casbin/casdoor:v1.843.0
-    container_name: polaris-base-casdoor
     restart: unless-stopped
     environment:
       RUNNING_IN_DOCKER: "true"
       driverName: postgres
       # host 使用 compose 服务名 postgres（网络别名），不是 container_name
-      dataSourceName: "user=${POSTGRES_USER:-polaris} password=${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required} host=postgres port=5432 sslmode=disable dbname=${CASDOOR_DB:-casdoor}"
+      dataSourceName: "user=${POSTGRES_USER:-polaris} password=${POSTGRES_PASSWORD:-changeme} host=postgres port=5432 sslmode=disable dbname=${CASDOOR_DB:-casdoor}"
     ports:
       - "${CASDOOR_PORT:-8000}:8000"
     depends_on:
       postgres:
         condition: service_healthy
+    networks:
+      default:
+        aliases:
+          - polaris-base-casdoor
     healthcheck:
       test: ["CMD-SHELL", "curl -fsSL http://localhost:8000/api/health || exit 1"]
       interval: 15s

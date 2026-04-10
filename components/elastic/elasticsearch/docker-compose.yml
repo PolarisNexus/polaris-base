@@ -1,7 +1,6 @@
 services:
   elasticsearch:
     image: docker.elastic.co/elasticsearch/elasticsearch:8.15.0
-    container_name: polaris-base-elasticsearch
     restart: unless-stopped
     environment:
       - discovery.type=single-node
@@ -11,6 +10,10 @@ services:
       - "${ES_PORT:-9200}:9200"
     volumes:
       - es_data:/usr/share/elasticsearch/data
+    networks:
+      default:
+        aliases:
+          - polaris-base-elasticsearch
     healthcheck:
       test: ["CMD-SHELL", "curl -fsSL http://localhost:9200/_cluster/health || exit 1"]
       interval: 15s
