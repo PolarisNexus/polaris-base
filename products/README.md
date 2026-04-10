@@ -28,7 +28,7 @@
    networks:
      polaris-net:
        external: true
-       name: polaris-base_polaris-net
+       name: polaris-net
    ```
-4. **访问基座服务**：通过别名 `polaris-base-<service>` 访问（如 `polaris-base-postgres`）
+4. **访问基座服务**：通过别名 `base-<service>` 访问（如 `base-postgres`）
 5. **提交 PR**：路由变更和产品登记在同一个 PR 中提交，经审核后合并

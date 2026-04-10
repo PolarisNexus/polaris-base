@@ -11,9 +11,10 @@ services:
     volumes:
       - es_data:/usr/share/elasticsearch/data
     networks:
-      default:
+      default: {}
+      polaris-net:
         aliases:
-          - polaris-base-elasticsearch
+          - base-elasticsearch
     healthcheck:
       test: ["CMD-SHELL", "curl -fsSL http://localhost:9200/_cluster/health || exit 1"]
       interval: 15s

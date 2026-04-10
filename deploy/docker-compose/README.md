@@ -37,26 +37,29 @@ make -C ../../scripts release
 
 ## 跨项目网络模型
 
-基座启动后会自动创建网络 `polaris-base_polaris-net`。
+基座启动后会自动创建共享网络 `polaris-net`。
 
 **产品仓库接入基座**：在产品仓库的 `docker-compose.yml` 中声明外部网络：
 
 ```yaml
 # polaris-alpha/docker-compose.yml
 services:
-  alpha-user:
+  alpha-api:
     environment:
-      DB_HOST: polaris-base-postgres    # 基座服务别名
+      DB_HOST: base-postgres            # 基座服务别名
     networks:
-      - polaris-net
+      default: {}
+      polaris-net:
+        aliases:
+          - alpha-api
 
 networks:
   polaris-net:
     external: true
-    name: polaris-base_polaris-net      # 引用基座的网络
+    name: polaris-net
 ```
 
-**服务别名规则**：每个基座服务在网络中注册 `polaris-base-<service>` 别名（如 `polaris-base-postgres`、`polaris-base-redis`）。产品仓库统一用别名访问，不依赖容器名。
+**服务别名规则**：基座服务在 `polaris-net` 上注册 `base-<service>` 别名（如 `base-postgres`、`base-redis`）。产品服务注册 `<project>-<service>` 别名（如 `alpha-api`）。
 
 **注意**：产品仓库需要在基座 `docker compose up -d` 之后才能启动（网络需先存在）。
 

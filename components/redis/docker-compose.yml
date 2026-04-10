@@ -8,9 +8,10 @@ services:
     volumes:
       - redis_data:/data
     networks:
-      default:
+      default: {}
+      polaris-net:
         aliases:
-          - polaris-base-redis
+          - base-redis
     healthcheck:
       test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD:-changeme}", "ping"]
       interval: 10s

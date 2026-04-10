@@ -12,9 +12,10 @@ services:
     volumes:
       - minio_data:/data
     networks:
-      default:
+      default: {}
+      polaris-net:
         aliases:
-          - polaris-base-minio
+          - base-minio
     healthcheck:
       test: ["CMD", "mc", "ready", "local"]
       interval: 15s

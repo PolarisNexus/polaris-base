@@ -21,5 +21,5 @@ include:
   - path: ../../components/casdoor/docker-compose.yml
 
 networks:
-  default:
-    name: polaris-base_polaris-net
+  polaris-net:
+    name: polaris-net

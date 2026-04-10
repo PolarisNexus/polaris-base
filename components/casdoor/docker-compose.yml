@@ -13,9 +13,10 @@ services:
       postgres:
         condition: service_healthy
     networks:
-      default:
+      default: {}
+      polaris-net:
         aliases:
-          - polaris-base-casdoor
+          - base-casdoor
     healthcheck:
       test: ["CMD-SHELL", "curl -fsSL http://localhost:8000/api/health || exit 1"]
       interval: 15s

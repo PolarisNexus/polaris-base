@@ -10,9 +10,10 @@ services:
       - "${APISIX_HTTP_PORT:-9080}:9080"
       - "${APISIX_HTTPS_PORT:-9443}:9443"
     networks:
-      default:
+      default: {}
+      polaris-net:
         aliases:
-          - polaris-base-apisix
+          - base-apisix
     healthcheck:
       test: ["CMD", "bash", "/usr/local/bin/healthcheck.sh"]
       interval: 15s
