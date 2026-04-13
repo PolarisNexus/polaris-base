@@ -4,7 +4,7 @@
 
 ## 运行模式
 
-Standalone 模式（无 etcd），声明式 YAML 配置（详见 ADR-0002）：
+Standalone 模式（无 etcd，无Dashboard），声明式 YAML 配置（详见 ADR-0002）：
 - `config.yaml` — APISIX 主配置（角色、配置源）
 - `apisix.yaml` — 路由与上游声明
 
