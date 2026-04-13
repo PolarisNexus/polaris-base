@@ -6,7 +6,7 @@ services:
       - discovery.type=single-node
       - xpack.security.enabled=true
       - xpack.security.transport.ssl.enabled=false
-      - ELASTIC_PASSWORD=${ELASTIC_PASSWORD:-E$$9xV2#pM7@zQ4!y}
+      - ELASTIC_PASSWORD=${ELASTIC_PASSWORD:-E&9xV2#pM7@zQ4!y}
       - ES_JAVA_OPTS=${ES_JAVA_OPTS:--Xms512m -Xmx512m}
     volumes:
       - es_data:/usr/share/elasticsearch/data
@@ -28,7 +28,7 @@ services:
       elasticsearch:
         condition: service_healthy
     environment:
-      ELASTIC_PASSWORD: ${ELASTIC_PASSWORD:-E$$9xV2#pM7@zQ4!y}
+      ELASTIC_PASSWORD: ${ELASTIC_PASSWORD:-E&9xV2#pM7@zQ4!y}
       KIBANA_PASSWORD: ${KIBANA_PASSWORD:-K#4nW8!aL5@wX7$$c}
     entrypoint: ["bash", "-c"]
     command:
