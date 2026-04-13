@@ -4,7 +4,7 @@
 services:
   elasticsearch:
     environment:
-      xpack.security.enabled: "true"
-      ELASTIC_PASSWORD: ${ES_PASSWORD:?ES_PASSWORD required in prod}
+      # 生产环境强制要求设置 ES 密码（不允许使用默认值）
+      ELASTIC_PASSWORD: ${ELASTIC_PASSWORD:?ELASTIC_PASSWORD required in prod}
 
   # APISIX 保持 9080/9443 对外，作为唯一公网入口

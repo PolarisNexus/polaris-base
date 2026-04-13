@@ -14,8 +14,10 @@ include:
   # ---------- 基础设施层 ----------
   - path: ../../components/postgres/docker-compose.yml
   - path: ../../components/redis/docker-compose.yml
-  - path: ../../components/elastic/elasticsearch/docker-compose.yml
+  - path: ../../components/elastic/docker-compose.yml
   - path: ../../components/minio/docker-compose.yml
+  # ---------- 可观测性层 ----------
+  - path: ../../components/observability/docker-compose.yml
   # ---------- 公共基座层 ----------
   - path: ../../components/apisix/docker-compose.yml
   - path: ../../components/casdoor/docker-compose.yml
