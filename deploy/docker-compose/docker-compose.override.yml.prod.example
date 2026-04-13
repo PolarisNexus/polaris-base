@@ -4,7 +4,8 @@
 services:
   elasticsearch:
     environment:
-      # 生产环境强制要求设置 ES 密码（不允许使用默认值）
       ELASTIC_PASSWORD: ${ELASTIC_PASSWORD:?ELASTIC_PASSWORD required in prod}
 
-  # APISIX 保持 9080/9443 对外，作为唯一公网入口
+  elasticsearch-otel:
+    environment:
+      ELASTIC_PASSWORD: ${ELASTIC_OTEL_PASSWORD:?ELASTIC_OTEL_PASSWORD required in prod}
