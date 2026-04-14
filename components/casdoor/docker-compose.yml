@@ -5,13 +5,10 @@ services:
     environment:
       RUNNING_IN_DOCKER: "true"
       driverName: postgres
-      # host 使用 compose 服务名 postgres（网络别名），不是 container_name
-      dataSourceName: "user=${POSTGRES_USER:-polaris} password=${POSTGRES_PASSWORD:-changeme} host=postgres port=5432 sslmode=disable dbname=${CASDOOR_DB:-casdoor}"
+      # host 使用 polaris-net 别名 base-postgres（PG 在 polaris-base-data 仓，跨 compose）
+      dataSourceName: "user=${POSTGRES_USER:-polaris} password=${POSTGRES_PASSWORD:-changeme} host=base-postgres port=5432 sslmode=disable dbname=${CASDOOR_DB:-casdoor}"
     ports:
       - "${CASDOOR_PORT:-8000}:8000"
-    depends_on:
-      postgres:
-        condition: service_healthy
     networks:
       default: {}
       polaris-net:

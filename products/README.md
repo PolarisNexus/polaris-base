@@ -17,18 +17,29 @@
 - 内部通信使用 gRPC，Proto 定义提交至 `api/proto/`
 - 通过 APISIX 网关统一暴露外部接口
 
-## 产品注册到基座网关
+## 启动链
 
-新产品接入基座网关的 PR 流程：
+平台必启两仓（ADR-0009）：
+
+```
+polaris-base-commons → polaris-base-data → <product>
+     (创建 polaris-net)   (加入网络)         (加入网络)
+```
+
+产品启动前确保两仓均已 up。
+
+## 产品注册到基座网关
 
 1. **添加网关路由**：在 `components/apisix/apisix.yaml` 添加产品的路由规则
 2. **登记产品信息**：在上方产品清单表格中添加一行
-3. **配置网络**：在产品仓库的 `docker-compose.yml` 中声明外部网络：
+3. **配置网络**：产品仓的 `docker-compose.yml` 声明外部网络：
    ```yaml
    networks:
      polaris-net:
        external: true
        name: polaris-net
    ```
-4. **访问基座服务**：通过别名 `base-<service>` 访问（如 `base-postgres`）
-5. **提交 PR**：路由变更和产品登记在同一个 PR 中提交，经审核后合并
+4. **访问基座服务**：通过别名 `base-<service>` 访问
+   - commons：`base-apisix`、`base-casdoor`
+   - data：`base-postgres`、`base-redis`、`base-elasticsearch`、`base-minio`
+5. **提交 PR**：路由变更和产品登记在同一个 PR 中提交

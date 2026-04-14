@@ -1,26 +1,21 @@
 # ==================================================
-# polaris-base 一键启动入口
-# 通过 include 引用各组件独立编排
+# polaris-base-commons 公共能力层入口
 #
-# 启动: docker compose up -d
-# 裁剪: COMPOSE_PROFILES=data docker compose up -d
-# 配置: 各组件目录下 .env.example → .env 覆盖默认值
-# 分发: make -C ../../scripts release
+# 启动：docker compose up -d
+# 配套数据底座：../polaris-base-data（另一仓库）
+# 组合启动：在仓库根目录运行 make up（同时启动本仓 + data 仓）
 # ==================================================
 
-name: polaris-base
+name: polaris-base-commons
 
 include:
-  # ---------- 基础设施层 ----------
-  - path: ../../components/postgres/docker-compose.yml
-  - path: ../../components/redis/docker-compose.yml
-  - path: ../../components/elastic/docker-compose.yml
-  - path: ../../components/minio/docker-compose.yml
-  # ---------- 可观测性层 ----------
+  # ---------- 可观测性 ----------
   - path: ../../components/observability/docker-compose.yml
-  # ---------- 公共基座层 ----------
+  # ---------- 网关 / IAM / WAF ----------
   - path: ../../components/apisix/docker-compose.yml
   - path: ../../components/casdoor/docker-compose.yml
+  # ---------- 自研共享服务（services/，首个立项时启用）----------
+  # - path: ../../services/<service>/docker-compose.yml
 
 networks:
   polaris-net:
