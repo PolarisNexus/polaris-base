@@ -1,6 +1,6 @@
 services:
   elasticsearch-otel:
-    image: docker.elastic.co/elasticsearch/elasticsearch:8.15.0
+    image: docker.elastic.co/elasticsearch/elasticsearch:9.3.3
     restart: unless-stopped
     environment:
       - discovery.type=single-node
@@ -22,7 +22,7 @@ services:
       retries: 5
 
   elasticsearch-otel-init:
-    image: docker.elastic.co/elasticsearch/elasticsearch:8.15.0
+    image: docker.elastic.co/elasticsearch/elasticsearch:9.3.3
     restart: "no"
     depends_on:
       elasticsearch-otel:
@@ -42,7 +42,7 @@ services:
       default: {}
 
   kibana-otel:
-    image: docker.elastic.co/kibana/kibana:8.15.0
+    image: docker.elastic.co/kibana/kibana:9.3.3
     restart: unless-stopped
     environment:
       SERVER_PORT: "5602"
