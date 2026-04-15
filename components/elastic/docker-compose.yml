@@ -1,0 +1,82 @@
+services:
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:9.3.3
+    restart: unless-stopped
+    profiles: ["data"]
+    labels:
+      polaris.plane: data
+      polaris.role: search
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=true
+      - xpack.security.transport.ssl.enabled=false
+      - ELASTIC_PASSWORD=${ELASTIC_PASSWORD:-E&9xV2#pM7@zQ4!y}
+      - ES_JAVA_OPTS=${ES_JAVA_OPTS:--Xms512m -Xmx512m}
+    volumes:
+      - es_data:/usr/share/elasticsearch/data
+    networks:
+      default: {}
+      polaris-net:
+        aliases:
+          - base-elasticsearch
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsSL -u elastic:$$ELASTIC_PASSWORD http://localhost:9200/_cluster/health || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+
+  elasticsearch-init:
+    image: docker.elastic.co/elasticsearch/elasticsearch:9.3.3
+    restart: "no"
+    profiles: ["data"]
+    labels:
+      polaris.plane: data
+      polaris.role: search
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+    environment:
+      ELASTIC_PASSWORD: ${ELASTIC_PASSWORD:-E&9xV2#pM7@zQ4!y}
+      KIBANA_PASSWORD: ${KIBANA_PASSWORD:-K#4nW8!aL5@wX7$$c}
+    entrypoint: ["bash", "-c"]
+    command:
+      - |
+        curl -s -X POST -u "elastic:$${ELASTIC_PASSWORD}" \
+          "http://elasticsearch:9200/_security/user/kibana_system/_password" \
+          -H "Content-Type: application/json" \
+          -d "{\"password\":\"$${KIBANA_PASSWORD}\"}"
+        echo " -> kibana_system password configured"
+    networks:
+      default: {}
+
+  kibana:
+    image: docker.elastic.co/kibana/kibana:9.3.3
+    restart: unless-stopped
+    profiles: ["data"]
+    labels:
+      polaris.plane: data
+      polaris.role: search
+    environment:
+      ELASTICSEARCH_HOSTS: http://elasticsearch:9200
+      ELASTICSEARCH_USERNAME: kibana_system
+      ELASTICSEARCH_PASSWORD: ${KIBANA_PASSWORD:-K#4nW8!aL5@wX7$$c}
+    ports:
+      - "${KIBANA_PORT:-5601}:5601"
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+      elasticsearch-init:
+        condition: service_completed_successfully
+    networks:
+      default: {}
+      polaris-net:
+        aliases:
+          - base-kibana
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsSL http://localhost:5601/api/status || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+
+volumes:
+  es_data:

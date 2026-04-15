@@ -1,66 +1,78 @@
 services:
-  elasticsearch-otel:
+  otel-elasticsearch:
     image: docker.elastic.co/elasticsearch/elasticsearch:9.3.3
     restart: unless-stopped
+    profiles: ["platform"]
+    labels:
+      polaris.plane: platform
+      polaris.role: observability
     environment:
       - discovery.type=single-node
       - xpack.security.enabled=true
       - xpack.security.transport.ssl.enabled=false
-      - ELASTIC_PASSWORD=${ELASTIC_OTEL_PASSWORD:-E^3bT6*kM9&cW2$$z}
-      - ES_JAVA_OPTS=${ES_OTEL_JAVA_OPTS:--Xms512m -Xmx512m}
+      - ELASTIC_PASSWORD=${OTEL_ELASTIC_PASSWORD:-E^3bT6*kM9&cW2$$z}
+      - ES_JAVA_OPTS=${OTEL_ES_JAVA_OPTS:--Xms512m -Xmx512m}
     volumes:
-      - es_otel_data:/usr/share/elasticsearch/data
+      - otel_elasticsearch_data:/usr/share/elasticsearch/data
     networks:
       default: {}
       polaris-net:
         aliases:
-          - base-elasticsearch-otel
+          - base-otel-elasticsearch
     healthcheck:
       test: ["CMD-SHELL", "curl -fsSL -u elastic:$$ELASTIC_PASSWORD http://localhost:9200/_cluster/health || exit 1"]
       interval: 15s
       timeout: 10s
       retries: 5
 
-  elasticsearch-otel-init:
+  otel-elasticsearch-init:
     image: docker.elastic.co/elasticsearch/elasticsearch:9.3.3
     restart: "no"
+    profiles: ["platform"]
+    labels:
+      polaris.plane: platform
+      polaris.role: observability
     depends_on:
-      elasticsearch-otel:
+      otel-elasticsearch:
         condition: service_healthy
     environment:
-      ELASTIC_OTEL_PASSWORD: ${ELASTIC_OTEL_PASSWORD:-E^3bT6*kM9&cW2$$z}
-      KIBANA_OTEL_PASSWORD: ${KIBANA_OTEL_PASSWORD:-K&8qZ5%dL2*eU9^f}
+      OTEL_ELASTIC_PASSWORD: ${OTEL_ELASTIC_PASSWORD:-E^3bT6*kM9&cW2$$z}
+      OTEL_KIBANA_PASSWORD: ${OTEL_KIBANA_PASSWORD:-K&8qZ5%dL2*eU9^f}
     entrypoint: ["bash", "-c"]
     command:
       - |
-        curl -s -X POST -u "elastic:$${ELASTIC_OTEL_PASSWORD}" \
-          "http://elasticsearch-otel:9200/_security/user/kibana_system/_password" \
+        curl -s -X POST -u "elastic:$${OTEL_ELASTIC_PASSWORD}" \
+          "http://otel-elasticsearch:9200/_security/user/kibana_system/_password" \
           -H "Content-Type: application/json" \
-          -d "{\"password\":\"$${KIBANA_OTEL_PASSWORD}\"}"
-        echo " -> elasticsearch-otel: kibana_system password configured"
+          -d "{\"password\":\"$${OTEL_KIBANA_PASSWORD}\"}"
+        echo " -> otel-elasticsearch: kibana_system password configured"
     networks:
       default: {}
 
-  kibana-otel:
+  otel-kibana:
     image: docker.elastic.co/kibana/kibana:9.3.3
     restart: unless-stopped
+    profiles: ["platform"]
+    labels:
+      polaris.plane: platform
+      polaris.role: observability
     environment:
       SERVER_PORT: "5602"
-      ELASTICSEARCH_HOSTS: http://elasticsearch-otel:9200
+      ELASTICSEARCH_HOSTS: http://otel-elasticsearch:9200
       ELASTICSEARCH_USERNAME: kibana_system
-      ELASTICSEARCH_PASSWORD: ${KIBANA_OTEL_PASSWORD:-K&8qZ5%dL2*eU9^f}
+      ELASTICSEARCH_PASSWORD: ${OTEL_KIBANA_PASSWORD:-K&8qZ5%dL2*eU9^f}
     ports:
-      - "${KIBANA_OTEL_PORT:-5602}:5602"
+      - "${OTEL_KIBANA_PORT:-5602}:5602"
     depends_on:
-      elasticsearch-otel:
+      otel-elasticsearch:
         condition: service_healthy
-      elasticsearch-otel-init:
+      otel-elasticsearch-init:
         condition: service_completed_successfully
     networks:
       default: {}
       polaris-net:
         aliases:
-          - base-kibana-otel
+          - base-otel-kibana
     healthcheck:
       test: ["CMD-SHELL", "curl -fsSL http://localhost:5602/api/status || exit 1"]
       interval: 15s
@@ -68,4 +80,4 @@ services:
       retries: 5
 
 volumes:
-  es_otel_data:
+  otel_elasticsearch_data:

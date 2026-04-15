@@ -60,6 +60,8 @@ Icon
 *.key
 *.cert
 .env
+# 例外：顶层 compose 的默认 profile 激活文件（非敏感，需跟随仓库，保证 `docker compose up -d` 一行启动）
+!deploy/docker-compose/.env
 *.sqlite3
 *.db
 docker-compose.override.yml

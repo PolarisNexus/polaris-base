@@ -6,6 +6,6 @@ services:
     environment:
       ELASTIC_PASSWORD: ${ELASTIC_PASSWORD:?ELASTIC_PASSWORD required in prod}
 
-  elasticsearch-otel:
+  otel-elasticsearch:
     environment:
-      ELASTIC_PASSWORD: ${ELASTIC_OTEL_PASSWORD:?ELASTIC_OTEL_PASSWORD required in prod}
+      ELASTIC_PASSWORD: ${OTEL_ELASTIC_PASSWORD:?OTEL_ELASTIC_PASSWORD required in prod}

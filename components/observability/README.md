@@ -10,25 +10,28 @@
 
 | 服务名 | polaris-net 别名 | 说明 |
 |--------|-----------------|------|
-| `elasticsearch-otel` | `base-elasticsearch-otel` | 日志 / APM 数据存储 |
-| `elasticsearch-otel-init` | — | 一次性初始化（配置 kibana_system 密码） |
-| `kibana-otel` | `base-kibana-otel` | 日志查询 / APM 可视化 |
+| `otel-elasticsearch` | `base-otel-elasticsearch` | 日志 / APM 数据存储 |
+| `otel-elasticsearch-init` | — | 一次性初始化（配置 kibana_system 密码） |
+| `otel-kibana` | `base-otel-kibana` | 日志查询 / APM 可视化 |
 
 ## 待接入
 
 | 服务名 | 说明 |
 |--------|------|
 | `otel-collector` | 统一遥测数据接收、处理、导出 |
-| `apm-server` | Elastic APM 数据接收 |
-| `prometheus` | 指标存储与告警 |
-| `grafana` | 指标仪表盘 |
+| `otel-apm-server` | Elastic APM 数据接收 |
+| `otel-prometheus` | 指标存储与告警 |
+| `otel-grafana` | 指标仪表盘 |
 
 ## 命名规约
+
+- 观测域组件一律 `otel-` 前缀（服务名、别名、卷名）
+- 业务域 ES/Kibana 在 `components/elastic/`，裸名 `elasticsearch` / `kibana`
 
 | 域 | ES | Kibana | 别名 |
 |----|-----|--------|------|
 | 业务 | `elasticsearch` | `kibana` | `base-elasticsearch` / `base-kibana` |
-| 观测 | `elasticsearch-otel` | `kibana-otel` | `base-elasticsearch-otel` / `base-kibana-otel` |
+| 观测 | `otel-elasticsearch` | `otel-kibana` | `base-otel-elasticsearch` / `base-otel-kibana` |
 
 ## 约束
 

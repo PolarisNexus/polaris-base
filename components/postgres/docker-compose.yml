@@ -1,0 +1,29 @@
+services:
+  postgres:
+    image: postgres:17.9
+    restart: unless-stopped
+    profiles: ["data"]
+    labels:
+      polaris.plane: data
+      polaris.role: relational-db
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-polaris}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-changeme}
+      POSTGRES_DB: ${POSTGRES_DB:-polaris}
+      POLARIS_EXTRA_DBS: ${POLARIS_EXTRA_DBS:-casdoor}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init:/docker-entrypoint-initdb.d:ro
+    networks:
+      default: {}
+      polaris-net:
+        aliases:
+          - base-postgres
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-polaris}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres_data:

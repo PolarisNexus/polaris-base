@@ -2,11 +2,17 @@ services:
   casdoor:
     image: casbin/casdoor:2.404.0
     restart: unless-stopped
+    profiles: ["platform"]
+    labels:
+      polaris.plane: platform
+      polaris.role: iam
+    depends_on:
+      postgres:
+        condition: service_healthy
     environment:
       RUNNING_IN_DOCKER: "true"
       driverName: postgres
-      # host 使用 polaris-net 别名 base-postgres（PG 在 polaris-base-data 仓，跨 compose）
-      dataSourceName: "user=${POSTGRES_USER:-polaris} password=${POSTGRES_PASSWORD:-changeme} host=base-postgres port=5432 sslmode=disable dbname=${CASDOOR_DB:-casdoor}"
+      dataSourceName: "user=${POSTGRES_USER:-polaris} password=${POSTGRES_PASSWORD:-changeme} host=postgres port=5432 sslmode=disable dbname=${CASDOOR_DB:-casdoor}"
     ports:
       - "${CASDOOR_PORT:-8000}:8000"
     networks:

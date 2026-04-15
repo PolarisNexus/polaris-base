@@ -19,14 +19,14 @@
 
 ## 启动链
 
-平台必启两仓（ADR-0009）：
+平台必启基座（ADR-0009）：
 
 ```
-polaris-base-commons → polaris-base-data → <product>
-     (创建 polaris-net)   (加入网络)         (加入网络)
+polaris-base  →  <product>
+  (创建 polaris-net)   (加入网络)
 ```
 
-产品启动前确保两仓均已 up。
+产品启动前确保基座已 up：`make up` 或 `docker compose -f deploy/docker-compose/docker-compose.yml up -d`。
 
 ## 产品注册到基座网关
 
@@ -39,7 +39,8 @@ polaris-base-commons → polaris-base-data → <product>
        external: true
        name: polaris-net
    ```
-4. **访问基座服务**：通过别名 `base-<service>` 访问
-   - commons：`base-apisix`、`base-casdoor`
-   - data：`base-postgres`、`base-redis`、`base-elasticsearch`、`base-minio`
+4. **访问基座服务**：通过别名 `base-<service>` 接入
+   - 网关 / IAM：`base-apisix`、`base-casdoor`
+   - 数据：`base-postgres`、`base-redis`、`base-elasticsearch`、`base-minio`
+   - 观测：`base-otel-elasticsearch`、`base-otel-kibana`
 5. **提交 PR**：路由变更和产品登记在同一个 PR 中提交

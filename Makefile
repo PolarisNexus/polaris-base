@@ -1,47 +1,57 @@
-# polaris-base-commons 便利启动层
+# polaris-base 便利启动层
 #
-# 本仓库（commons）与 polaris-base-data 是并列的平台底座，必须成对启动。
-# 约定 polaris-base-data 位于 ../polaris-base-data。
+# 单仓 + 单 compose 项目（name: polaris-base）
+# plane 通过 compose profile 激活；role 通过 label 过滤（ADR-0009）
 #
-# 单独启动 commons：docker compose -f deploy/docker-compose/docker-compose.yml up -d
-# 单独启动 data：  cd ../polaris-base-data && docker compose up -d
+# 默认 .env 激活 data + platform + services 全部 profile。
+# 按 plane 选择性启动时覆盖环境变量：COMPOSE_PROFILES=data make up-raw
 
-DATA_DIR ?= ../polaris-base-data
-COMMONS_COMPOSE := deploy/docker-compose/docker-compose.yml
+COMPOSE := docker compose -f deploy/docker-compose/docker-compose.yml
 
-.PHONY: up down ps logs restart help
+.PHONY: up up-data up-platform up-services down restart ps ps-data ps-platform ps-services logs help
 
-## up: 依次启动 commons（创建 polaris-net）+ data
+## up: 启动全量（data + platform + services）
 up:
-	@echo ">>> [1/2] polaris-base-commons up"
-	docker compose -f $(COMMONS_COMPOSE) up -d
-	@echo ">>> [2/2] polaris-base-data up"
-	@cd $(DATA_DIR) && docker compose up -d
-	@echo ">>> done"
+	$(COMPOSE) up -d
 
-## down: 依次停止 data + commons
+## up-data: 仅启动 data plane（PG / Redis / ES / MinIO）
+up-data:
+	COMPOSE_PROFILES=data $(COMPOSE) up -d
+
+## up-platform: 仅启动 platform plane（APISIX / Casdoor / observability）
+up-platform:
+	COMPOSE_PROFILES=platform $(COMPOSE) up -d
+
+## up-services: 仅启动 services plane（自研共享服务）
+up-services:
+	COMPOSE_PROFILES=services $(COMPOSE) up -d
+
+## down: 停止并清理全部容器
 down:
-	@echo ">>> [1/2] polaris-base-data down"
-	@cd $(DATA_DIR) && docker compose down
-	@echo ">>> [2/2] polaris-base-commons down"
-	docker compose -f $(COMMONS_COMPOSE) down
-	@echo ">>> done"
-
-## ps: 查看两仓容器状态
-ps:
-	@echo ">>> polaris-base-commons"
-	docker compose -f $(COMMONS_COMPOSE) ps
-	@echo ""
-	@echo ">>> polaris-base-data"
-	@cd $(DATA_DIR) && docker compose ps
-
-## logs: 跟踪两仓日志
-logs:
-	@echo "use: docker compose -f $(COMMONS_COMPOSE) logs -f <svc>"
-	@echo "  or: (cd $(DATA_DIR) && docker compose logs -f <svc>)"
+	$(COMPOSE) down
 
 ## restart: down + up
 restart: down up
+
+## ps: 查看全部容器
+ps:
+	$(COMPOSE) ps
+
+## ps-data: 按 label 过滤 data plane 容器
+ps-data:
+	docker ps --filter label=com.docker.compose.project=polaris-base --filter label=polaris.plane=data
+
+## ps-platform: 按 label 过滤 platform plane 容器
+ps-platform:
+	docker ps --filter label=com.docker.compose.project=polaris-base --filter label=polaris.plane=platform
+
+## ps-services: 按 label 过滤 services plane 容器
+ps-services:
+	docker ps --filter label=com.docker.compose.project=polaris-base --filter label=polaris.plane=services
+
+## logs: 提示日志命令
+logs:
+	@echo "use: $(COMPOSE) logs -f <svc>"
 
 ## help: 显示本帮助
 help:
