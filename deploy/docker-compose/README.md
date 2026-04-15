@@ -7,7 +7,7 @@ cd deploy/docker-compose
 docker compose up -d
 ```
 
-所有环境变量都有内置默认值，**零配置即可启动**。
+所有环境变量都有内置默认值，**零配置即可启动**。默认 `.env` 激活 `data + platform + services` 全部 profile（ADR-0005、ADR-0009）。
 
 ## 自定义配置
 
@@ -18,18 +18,35 @@ cp ../../components/postgres/.env.example ../../components/postgres/.env
 # 编辑 .env 覆盖默认值
 ```
 
-## 按需启动
+## 按需启动（按 plane）
+
+通过 `COMPOSE_PROFILES` 选择 plane（shell 环境变量优先于 `.env` 文件）：
 
 ```bash
-docker compose up -d postgres redis              # 仅数据层
-docker compose up -d postgres redis apisix        # 数据层 + 网关
+COMPOSE_PROFILES=data docker compose up -d            # 仅 data plane
+COMPOSE_PROFILES=platform docker compose up -d        # 仅 platform plane
+COMPOSE_PROFILES=data,platform docker compose up -d   # data + platform
 ```
 
-## 生成单文件分发
+或通过 Makefile：
 
 ```bash
-make release
-# 生成 docker-compose.full.yml，可独立分发部署
+make up-data / up-platform / up-services
+```
+
+## 视图过滤（按 plane / role）
+
+`docker compose ps` 仅支持 status 过滤；plane/role 走 `docker ps` label 过滤：
+
+```bash
+docker ps --filter label=com.docker.compose.project=polaris-base \
+          --filter label=polaris.plane=data
+
+docker ps --filter label=com.docker.compose.project=polaris-base \
+          --filter label=polaris.role=cache
+
+# Makefile 便利
+make ps-data / ps-platform / ps-services
 ```
 
 ## 跨项目网络模型
@@ -67,7 +84,7 @@ networks:
 | APISIX | 9080 / 9443 | 唯一公网入口 |
 | Casdoor | 8000 | IAM 管理 UI |
 | Kibana | 5601 | 业务 ES 管理 |
-| Kibana-otel | 5602 | 观测 ES 管理 |
+| otel-Kibana | 5602 | 观测 ES 管理 |
 | MinIO Console | 9001 | 对象存储管理 |
 | PG / Redis / ES | — | 仅内部访问 |
 
@@ -80,4 +97,4 @@ docker compose exec redis redis-cli
 
 ## 数据持久化
 
-卷命名为 `polaris-base_<component>_data`。`docker compose down` 不删卷；`docker compose down -v` 删除。
+卷命名为 `polaris-base_<component>_data`（由 `name: polaris-base` 前缀生成）。`docker compose down` 不删卷；`docker compose down -v` 删除。
