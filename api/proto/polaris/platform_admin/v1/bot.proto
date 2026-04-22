@@ -1,0 +1,199 @@
+syntax = "proto3";
+
+package polaris.platform_admin.v1;
+
+import "polaris/common/v1/types.proto";
+import "google/protobuf/duration.proto";
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/PolarisNexus/polaris-base/api/gen/go/polaris/platform_admin/v1;platform_adminv1";
+
+// BotService 封装 CrowdSec LAPI（ADR-0012 行为层）。
+//
+// 决策（Decision）= 当前生效的封禁/验证动作；告警（Alert）= 触发决策的事件。
+// Scenario = 检测逻辑；Collection = 一组 Scenario 的打包（从 hub.crowdsec.net 获取）。
+service BotService {
+  // ---------- Decisions ----------
+  rpc ListDecisions(ListDecisionsRequest) returns (ListDecisionsResponse);
+  // 手动封禁（作用域可为 ip / range / country）。
+  rpc CreateDecision(CreateDecisionRequest) returns (CreateDecisionResponse);
+  // 手动解封。
+  rpc DeleteDecision(DeleteDecisionRequest) returns (DeleteDecisionResponse);
+
+  // ---------- Alerts ----------
+  rpc ListAlerts(ListAlertsRequest) returns (ListAlertsResponse);
+  rpc GetAlert(GetAlertRequest) returns (GetAlertResponse);
+
+  // ---------- Scenarios / Collections ----------
+  rpc ListScenarios(ListScenariosRequest) returns (ListScenariosResponse);
+  rpc ListCollections(ListCollectionsRequest) returns (ListCollectionsResponse);
+  rpc InstallCollection(InstallCollectionRequest) returns (InstallCollectionResponse);
+  rpc RemoveCollection(RemoveCollectionRequest) returns (RemoveCollectionResponse);
+}
+
+// Decision 当前生效的决策。
+message Decision {
+  int64 id = 1;
+  // 来源：cscli / crowdsec / lists:<collection> / ...
+  string origin = 2;
+  // 动作：ban / captcha / throttle。
+  string type = 3;
+  // 作用域：ip / range / country / as。
+  string scope = 4;
+  // 作用值（如 IP 地址、CIDR、国家代码）。
+  string value = 5;
+  // 触发该决策的 scenario 名（若为手动则为空）。
+  string scenario = 6;
+  google.protobuf.Duration duration = 7;
+  google.protobuf.Timestamp created_at = 8;
+  google.protobuf.Timestamp expires_at = 9;
+  // 是否通过 LAPI 从社区黑名单同步而来。
+  bool simulated = 10;
+}
+
+// Alert 告警事件。
+message Alert {
+  int64 id = 1;
+  string scenario = 2;
+  string scenario_hash = 3;
+  // 触发源 IP。
+  string source_ip = 4;
+  string source_scope = 5;
+  // 聚合的事件数。
+  int32 events_count = 6;
+  google.protobuf.Timestamp started_at = 7;
+  google.protobuf.Timestamp stopped_at = 8;
+  // 该 alert 产生的决策 id 列表。
+  repeated int64 decision_ids = 9;
+  string message = 10;
+}
+
+// Scenario 检测规则元数据。
+message Scenario {
+  string name = 1;
+  string description = 2;
+  bool installed = 3;
+  // 所属 Collection 名（若通过集合安装）。
+  string collection = 4;
+}
+
+// Collection 一组 Scenario 的打包。
+message Collection {
+  string name = 1;
+  string description = 2;
+  bool installed = 3;
+  // 该集合包含的 scenario 名列表。
+  repeated string scenarios = 4;
+  // 当前版本 / 最新版本。
+  string version = 5;
+  string latest_version = 6;
+}
+
+// ---------- Decisions 请求/响应 ----------
+
+message ListDecisionsRequest {
+  polaris.common.v1.PageRequest page = 1;
+  // 过滤：ip / range / scope 等。空为全部。
+  string scope = 2;
+  string value = 3;
+  string origin = 4;
+  // 只看未过期。
+  bool active_only = 5;
+}
+
+message ListDecisionsResponse {
+  repeated Decision items = 1;
+  polaris.common.v1.PageInfo page_info = 2;
+}
+
+message CreateDecisionRequest {
+  // ip / range / country / as。
+  string scope = 1;
+  string value = 2;
+  // ban / captcha / throttle，默认 ban。
+  string type = 3;
+  google.protobuf.Duration duration = 4;
+  // 必填，写入审计。
+  string reason = 5;
+}
+
+message CreateDecisionResponse {
+  Decision decision = 1;
+}
+
+message DeleteDecisionRequest {
+  // 二选一：按 id 或按 scope+value 解封。
+  int64 id = 1;
+  string scope = 2;
+  string value = 3;
+  string reason = 4;
+}
+
+message DeleteDecisionResponse {
+  int32 deleted_count = 1;
+}
+
+// ---------- Alerts 请求/响应 ----------
+
+message ListAlertsRequest {
+  polaris.common.v1.PageRequest page = 1;
+  polaris.common.v1.TimeRange time_range = 2;
+  string scenario = 3;
+  string source_ip = 4;
+  polaris.common.v1.SortOrder order = 5;
+}
+
+message ListAlertsResponse {
+  repeated Alert items = 1;
+  polaris.common.v1.PageInfo page_info = 2;
+}
+
+message GetAlertRequest {
+  int64 id = 1;
+}
+
+message GetAlertResponse {
+  Alert alert = 1;
+}
+
+// ---------- Scenarios / Collections 请求/响应 ----------
+
+message ListScenariosRequest {
+  polaris.common.v1.PageRequest page = 1;
+  // 仅返回已安装。
+  bool installed_only = 2;
+  string query = 3;
+}
+
+message ListScenariosResponse {
+  repeated Scenario items = 1;
+  polaris.common.v1.PageInfo page_info = 2;
+}
+
+message ListCollectionsRequest {
+  polaris.common.v1.PageRequest page = 1;
+  bool installed_only = 2;
+  string query = 3;
+}
+
+message ListCollectionsResponse {
+  repeated Collection items = 1;
+  polaris.common.v1.PageInfo page_info = 2;
+}
+
+message InstallCollectionRequest {
+  // 例：crowdsecurity/whitelist-good-actors
+  string name = 1;
+}
+
+message InstallCollectionResponse {
+  Collection collection = 1;
+}
+
+message RemoveCollectionRequest {
+  string name = 1;
+}
+
+message RemoveCollectionResponse {
+  bool ok = 1;
+}

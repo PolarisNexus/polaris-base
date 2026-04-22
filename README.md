@@ -14,11 +14,13 @@ polaris-base/
 │   ├── redis/              cache               (plane: data)
 │   ├── elastic/            search              (plane: data)
 │   ├── minio/              object-storage      (plane: data)
-│   ├── apisix/             gateway             (plane: platform)
-│   ├── casdoor/            iam                 (plane: platform，ADR-0010 重选型中)
-│   ├── observability/      OTel ES + Kibana    (plane: platform)
-│   └── safeline/           waf                 (plane: platform，ADR-0006 暂缓)
+│   ├── etcd/               config-store        (plane: platform)
+│   ├── apisix/             gateway + Coraza WAF (plane: platform，ADR-0002/0012)
+│   ├── crowdsec/           waf-bot             (plane: platform，ADR-0012)
+│   ├── authentik/          iam                 (plane: platform，ADR-0010)
+│   └── observability/      OTel ES + Kibana    (plane: platform)
 ├── services/               自研共享业务服务（Go + React + AntD Pro，见 ADR-0011）
+│   ├── platform-admin/     WAF + Gateway 管理控制台（ADR-0013）
 │   ├── README.md
 │   └── _template/          新服务脚手架
 ├── deploy/docker-compose/  顶层 compose 入口 + .env（默认 profile 激活）
@@ -48,7 +50,7 @@ make ps-data    # 过滤 data plane 容器视图
 | plane | 组件 | role |
 |-------|------|------|
 | **data** | postgres / redis / elastic / minio | relational-db / cache / search / object-storage |
-| **platform** | apisix / casdoor / observability / safeline | gateway / iam / observability / waf |
+| **platform** | etcd / apisix / crowdsec / authentik / observability | config-store / gateway / waf-bot / iam / observability |
 | **services** | services/<svc> | 各自业务 role |
 
 每个 compose 服务自带：
@@ -68,5 +70,5 @@ labels:
 
 ## 相关文档
 
-- [架构决策记录](docs/adr/)（核心：ADR-0001、ADR-0005、ADR-0009、ADR-0011）
+- [架构决策记录](docs/adr/)（核心：ADR-0001、ADR-0002、ADR-0005、ADR-0009、ADR-0010、ADR-0011、ADR-0012、ADR-0013）
 - 平台顶层技术栈：`docs/architecture/`

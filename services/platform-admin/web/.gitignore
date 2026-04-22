@@ -1,0 +1,8 @@
+node_modules
+dist
+.vite
+*.log
+# TypeScript 增量编译缓存
+*.tsbuildinfo
+# Vite HMR 场景下 TSX 会有 .js 并排伪输出，避免误提交
+src/**/*.js

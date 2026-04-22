@@ -13,9 +13,9 @@
 
 | 服务 | 路径 | 职责 | 状态 |
 |------|------|------|------|
-| — | — | — | 待立项 |
+| platform-admin | `platform-admin/` | WAF + Gateway 统一管理控制台（ADR-0013） | 开发中 |
 
-> 首个候选：会员（membership）或邮件（email）
+> 后续候选：会员（membership）或邮件（email）
 
 ## 新增服务流程
 
@@ -24,13 +24,13 @@
 3. 运行 `buf generate` 生成 Go / TS 桩代码
 4. 实现业务逻辑
 5. 在 `deploy/docker-compose/docker-compose.yml` 添加 service include
-6. 在 `components/apisix/` 路由配置注册对外路径
+6. 在 `components/apisix/routes/NN-<new-service>.yaml` 声明对外路由（ADR-0002 Git 源模型），合入后 CI 跑 `scripts/apisix-apply-routes.sh`
 7. 更新本清单表
 
 ## 约束
 
 - **API First**：proto 先行，代码后写
-- **IAM 解耦**：不直接调用 Casdoor/后继者私有 API，走 ADR-0004 Adapter
+- **IAM 解耦**：不直接调用 Authentik 私有 API，走标准 OIDC + ADR-0004 Adapter
 - **observability**：统一使用 OTel SDK（ADR 观测性约束）
 - **密钥**：不硬编码，一律走环境变量 / Secret（ADR-0007）
 

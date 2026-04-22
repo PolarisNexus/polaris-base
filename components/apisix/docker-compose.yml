@@ -1,4 +1,36 @@
 services:
+  # Coraza WASM 一次性下载 + 日志卷 perms 初始化。
+  # 成功后退出；apisix 启动前等待其 completed。
+  apisix-coraza-init:
+    image: alpine:3.20
+    restart: "no"
+    profiles: ["platform"]
+    labels:
+      polaris.plane: platform
+      polaris.role: init
+    volumes:
+      - apisix_wasm:/wasm
+      - apisix_logs:/logs
+    command:
+      - sh
+      - -c
+      - |
+        set -eu
+        # 1) coraza.wasm 下载（~18MB，不随仓库分发）
+        if [ -f /wasm/coraza.wasm ]; then
+          echo "coraza.wasm already present, skip download"
+        else
+          apk add --no-cache curl unzip >/dev/null
+          echo "downloading coraza-proxy-wasm 0.6.0..."
+          curl -fsSL https://github.com/corazawaf/coraza-proxy-wasm/releases/download/0.6.0/coraza-proxy-wasm-0.6.0.zip -o /tmp/c.zip
+          unzip -o /tmp/c.zip -d /wasm
+          mv -f /wasm/coraza-proxy-wasm.wasm /wasm/coraza.wasm
+          echo "coraza.wasm ready: $(wc -c < /wasm/coraza.wasm) bytes"
+        fi
+        # 2) 日志卷 perms：APISIX 以 uid=636 写 access.log；命名卷默认 root-owned
+        chown 636:636 /logs
+        echo "apisix_logs chowned to apisix(636:636)"
+
   apisix:
     image: apache/apisix:3.16.0-debian
     restart: unless-stopped
@@ -6,13 +38,21 @@ services:
     labels:
       polaris.plane: platform
       polaris.role: gateway
+    depends_on:
+      etcd:
+        condition: service_healthy
+      apisix-coraza-init:
+        condition: service_completed_successfully
     volumes:
       - ./config.yaml:/usr/local/apisix/conf/config.yaml:ro
-      - ./apisix.yaml:/usr/local/apisix/conf/apisix.yaml:ro
       - ../../scripts/healthcheck/apisix.sh:/usr/local/bin/healthcheck.sh:ro
+      - apisix_wasm:/usr/local/apisix/wasm:ro
+      # 与 CrowdSec 共享 access.log，供行为层采集读取（ADR-0012）。
+      - apisix_logs:/var/log/apisix
     ports:
       - "${APISIX_HTTP_PORT:-9080}:9080"
       - "${APISIX_HTTPS_PORT:-9443}:9443"
+      - "${APISIX_ADMIN_PORT:-9180}:9180"
     networks:
       default: {}
       polaris-net:
@@ -23,3 +63,7 @@ services:
       interval: 15s
       timeout: 10s
       retries: 5
+
+volumes:
+  apisix_wasm:
+  apisix_logs:

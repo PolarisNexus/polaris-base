@@ -28,7 +28,7 @@ COMPOSE_PROFILES=platform docker compose up -d        # 仅 platform plane
 COMPOSE_PROFILES=data,platform docker compose up -d   # data + platform
 ```
 
-或通过 Makefile：
+或通过仓库根 Makefile：
 
 ```bash
 make up-data / up-platform / up-services
@@ -81,8 +81,8 @@ networks:
 
 | 服务 | 端口 | 说明 |
 |------|------|------|
-| APISIX | 9080 / 9443 | 唯一公网入口 |
-| Casdoor | 8000 | IAM 管理 UI |
+| APISIX | 9080 / 9443 / 9180 | 公网入口 + Admin API |
+| Authentik | 9000 | IAM 管理 UI |
 | Kibana | 5601 | 业务 ES 管理 |
 | otel-Kibana | 5602 | 观测 ES 管理 |
 | MinIO Console | 9001 | 对象存储管理 |

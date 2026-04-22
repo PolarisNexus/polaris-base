@@ -10,7 +10,7 @@ services:
       POSTGRES_USER: ${POSTGRES_USER:-polaris}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-changeme}
       POSTGRES_DB: ${POSTGRES_DB:-polaris}
-      POLARIS_EXTRA_DBS: ${POLARIS_EXTRA_DBS:-casdoor}
+      POLARIS_EXTRA_DBS: ${POLARIS_EXTRA_DBS:-authentik}
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./init:/docker-entrypoint-initdb.d:ro

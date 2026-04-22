@@ -1,0 +1,8 @@
+routes:
+  - id: health
+    uri: /health
+    plugins:
+      fault-injection:
+        abort:
+          http_status: 200
+          body: "ok\n"

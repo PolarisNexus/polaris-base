@@ -1,0 +1,71 @@
+services:
+  authentik-server:
+    image: ghcr.io/goauthentik/server:2025.10
+    command: server
+    restart: unless-stopped
+    profiles: ["platform"]
+    labels:
+      polaris.plane: platform
+      polaris.role: iam
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      AUTHENTIK_POSTGRESQL__HOST: postgres
+      AUTHENTIK_POSTGRESQL__PORT: 5432
+      AUTHENTIK_POSTGRESQL__NAME: ${AUTHENTIK_DB:-authentik}
+      AUTHENTIK_POSTGRESQL__USER: ${POSTGRES_USER:-polaris}
+      AUTHENTIK_POSTGRESQL__PASSWORD: ${POSTGRES_PASSWORD:-changeme}
+      AUTHENTIK_SECRET_KEY: ${AUTHENTIK_SECRET_KEY:-changeme-generate-a-real-secret-key}
+      # AUTHENTIK_ERROR_REPORTING__ENABLED: "false"
+    volumes:
+      - authentik_media:/media
+      - authentik_templates:/templates
+      - ./blueprints:/blueprints/custom:ro
+    ports:
+      - "${AUTHENTIK_PORT:-9000}:9000"
+    networks:
+      default: {}
+      polaris-net:
+        aliases:
+          - base-authentik
+    healthcheck:
+      test: ["CMD", "ak", "healthcheck"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+
+  authentik-worker:
+    image: ghcr.io/goauthentik/server:2025.10
+    command: worker
+    restart: unless-stopped
+    profiles: ["platform"]
+    labels:
+      polaris.plane: platform
+      polaris.role: iam-worker
+    depends_on:
+      postgres:
+        condition: service_healthy
+      authentik-server:
+        condition: service_healthy
+    environment:
+      AUTHENTIK_POSTGRESQL__HOST: postgres
+      AUTHENTIK_POSTGRESQL__PORT: 5432
+      AUTHENTIK_POSTGRESQL__NAME: ${AUTHENTIK_DB:-authentik}
+      AUTHENTIK_POSTGRESQL__USER: ${POSTGRES_USER:-polaris}
+      AUTHENTIK_POSTGRESQL__PASSWORD: ${POSTGRES_PASSWORD:-changeme}
+      AUTHENTIK_SECRET_KEY: ${AUTHENTIK_SECRET_KEY:-changeme-generate-a-real-secret-key}
+    volumes:
+      - authentik_media:/media
+      - authentik_templates:/templates
+      - ./blueprints:/blueprints/custom:ro
+    networks:
+      default: {}
+      polaris-net:
+        aliases:
+          - base-authentik-worker
+
+volumes:
+  authentik_media:
+  authentik_templates:

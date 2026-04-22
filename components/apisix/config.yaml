@@ -1,7 +1,44 @@
-# APISIX 主配置 — 启用 Standalone 模式（不依赖 etcd）
+# APISIX 主配置 — etcd 模式（传统模式，ADR-0002）
 # 挂载到 /usr/local/apisix/conf/config.yaml
 
+apisix:
+  node_listen: 9080
+  ssl:
+    enable: true
+    listen_port: 9443
+
+# APISIX 默认把 access.log / error.log 软链到 /dev/stdout（docker logs 可见），
+# 但 CrowdSec 需要从真实文件读日志做行为层检测（ADR-0012）。
+# 这里追加一份文件日志，写到共享卷 /var/log/apisix/，CrowdSec file source 读同一路径。
+# 不影响原有 stdout 与 elasticsearch-logger（平行三份）。
+nginx_config:
+  # APISIX 默认 main 格式带 upstream / apisix_request_id 等扩展字段，CrowdSec nginx parser 不认。
+  # 保持默认 access_log 写 stdout（docker logs 可见），追加一份 combined 格式写文件供 CrowdSec 读。
+  http_configuration_snippet: |
+    log_format crowdsec_combined '$remote_addr - $remote_user [$time_local] '
+                                 '"$request" $status $body_bytes_sent '
+                                 '"$http_referer" "$http_user_agent"';
+    access_log /var/log/apisix/access.log crowdsec_combined buffer=8192 flush=3s;
+
 deployment:
-  role: data_plane
-  role_data_plane:
-    config_provider: yaml
+  admin:
+    admin_key:
+      - name: admin
+        key: ${{APISIX_ADMIN_KEY:=edd1c9f034335f136f87ad84b625c8f1}}
+        role: admin
+    allow_admin:
+      - 0.0.0.0/0
+  etcd:
+    host:
+      - "http://etcd:2379"
+    prefix: "/apisix"
+
+# WASM 插件注册（ADR-0012 请求层 WAF）。
+# 二进制由 apisix-coraza-init 容器下载到 apisix_wasm volume。
+# 启停与规则调整走 routes/95-coraza.yaml（Git 源 → apply → etcd）。
+wasm:
+  plugins:
+    - name: coraza-proxy-wasm
+      priority: 7999
+      file: /usr/local/apisix/wasm/coraza.wasm
+      http_request_phase: access

@@ -30,7 +30,7 @@ polaris-base  →  <product>
 
 ## 产品注册到基座网关
 
-1. **添加网关路由**：在 `components/apisix/apisix.yaml` 添加产品的路由规则
+1. **添加网关路由**：新增 `components/apisix/routes/NN-<product>.yaml`（Git 源，ADR-0002），PR 合入后 CI 跑 `scripts/apisix-apply-routes.sh` 写入 etcd；运行时插件/限流调整走 platform-admin UI
 2. **登记产品信息**：在上方产品清单表格中添加一行
 3. **配置网络**：产品仓的 `docker-compose.yml` 声明外部网络：
    ```yaml
@@ -40,7 +40,7 @@ polaris-base  →  <product>
        name: polaris-net
    ```
 4. **访问基座服务**：通过别名 `base-<service>` 接入
-   - 网关 / IAM：`base-apisix`、`base-casdoor`
+   - 网关 / IAM：`base-apisix`、`base-authentik`
    - 数据：`base-postgres`、`base-redis`、`base-elasticsearch`、`base-minio`
    - 观测：`base-otel-elasticsearch`、`base-otel-kibana`
-5. **提交 PR**：路由变更和产品登记在同一个 PR 中提交
+5. **提交 PR**：产品登记提交 PR

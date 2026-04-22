@@ -1,0 +1,29 @@
+# 全局 Coraza WAF（OWASP CRS）
+#
+# 部署形态：coraza-proxy-wasm（Wasm 插件，见 config.yaml wasm.plugins）
+# 规则源：CRS 3.x 已嵌入 wasm，通过 Include @owasp_crs/*.conf 启用
+# 调整路径（ADR-0002）：编辑本文件 → PR → CI apply → etcd
+#   禁用某条 CRS 规则：在 directives 数组末尾追加 "SecRuleRemoveById <id>"
+#   路由级例外：另写 route 级 plugins.coraza-proxy-wasm，覆盖本 global_rule
+#
+# UI 编辑待 P2（ADR-0013）。MVP 故意只经 Git 路径，避免一键关 WAF 的运维事故。
+#
+# conf 采用 APISIX "string 形式"，内容为 coraza-proxy-wasm 的原生 JSON 配置。
+
+global_rules:
+  - id: coraza
+    plugins:
+      coraza-proxy-wasm:
+        conf: |
+          {
+            "directives_map": {
+              "default": [
+                "SecRuleEngine On",
+                "SecRequestBodyAccess On",
+                "SecResponseBodyAccess Off",
+                "Include @crs-setup-conf",
+                "Include @owasp_crs/*.conf"
+              ]
+            },
+            "default_directives": "default"
+          }

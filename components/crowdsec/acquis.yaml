@@ -1,0 +1,14 @@
+# CrowdSec 日志采集（ADR-0012 行为层）。
+# APISIX 通过 nginx_config 的 http_configuration_snippet 额外写一份 combined 格式 access.log
+# 到共享卷 apisix_logs（/var/log/apisix/access.log），由 CrowdSec nginx 集合解析。
+# 主流程的 stdout + elasticsearch-logger（ADR-0013 P1 WAF 攻击日志源）完全不受影响。
+#
+# 备注：
+# - 默认 crowdsecurity/whitelists 豁免 RFC1918 / loopback，dev 从 172.x 发请求不会触发决策，
+#   属预期行为（生产从真实公网 IP 流入时才会命中）。
+# - WSL2 下 source: docker 因 daemon API 响应异常不可用，统一走 file。
+source: file
+filenames:
+  - /var/log/apisix/access.log
+labels:
+  type: nginx

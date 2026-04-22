@@ -1,69 +1,56 @@
-# ADR-0010: IAM 重选型——Casdoor 退场
+# ADR-0010: IAM 重选型——Authentik 接替 Casdoor
 
 ## Status
 
-Proposed（占位；候选评估与最终决策待独立 PR 完成）
+Accepted（2026-04-19）
 
 ## Context
 
-ADR-0004 选择 Casdoor 作为 IAM 实现，并约定业务代码通过 Adapter 对接以降低切换成本。实际部署运行后发现几个与平台开源原则冲突的问题：
-
-- **商业菜单强制展示**：管理界面持续显示赞助、付费升级、"Pro 版"入口
-- **功能付费墙**：部分关键功能（高级 RBAC、审计、SLA）仅在付费版提供
-- **开源版本完整度观感不足**：自托管版本被定位为"试用/入门"，非企业级一等公民
-
-ADR-0004 的 Adapter 抽象已就位，切换成本可控，是落实替换的合适时机。同时 ADR-0009 完成基座拆分后，IAM 将跨仓连接 `polaris-base-data` 中的 PG，IAM 本身对 `depends_on` 的依赖已经弱化，候选范围更宽。
+Casdoor 存在"假开源"问题：商业菜单强制展示、关键功能付费墙、开源版定位为试用级别。ADR-0004 的 Adapter 抽象已就位，切换成本可控。
 
 ## Decision
 
-**决策：替换 Casdoor**。具体替换目标由后续独立 PR 评估完成。
+**选定 Authentik 替代 Casdoor。** 复用 Authentik 自带 Admin UI，不自建 IAM 管理界面。
 
-## 硬过滤条件
+### 选型理由
 
-候选必须全部满足：
+| 维度 | Authentik |
+|------|----------|
+| 许可证 | MIT |
+| 开源纯度 | 99% commits 在开源版；原则：永不将已有功能移入付费版 |
+| Admin UI | 现代 SPA，干净无商业品牌 |
+| 认证流 | **Flows 可视化拖拽编排**（杀手特性） |
+| 协议 | OIDC/OAuth2/SAML/LDAP/SCIM/RADIUS |
+| 多租户 | Tenant 原生支持 |
+| 用户管理 | 完整（CRUD/组/会话/审计/自助密码重置，全部免费） |
+| 部署 | server + worker + PG（2025.10 已移除 Redis 依赖） |
 
-1. **许可证**：Apache 2.0 / MIT / MPL / AGPL / BSD（非商业源可用许可）
-2. **无核心功能付费墙**：OIDC/OAuth2、SAML、用户管理、RBAC、多租户、SCIM 等核心能力必须在自托管版本完整可用
-3. **无强制商业界面**：管理界面不显示赞助/升级/广告类内容
-4. **生产级成熟度**：已在多家知名生产环境使用；文档完整
-5. **K8s 友好**：提供 Helm chart 或 Operator，资源占用可接受
+### 集成方式
 
-## 候选对比维度（待填充）
+```
+APISIX ──jwt-auth 插件──→ Authentik JWKS endpoint（标准 OIDC Discovery）
+业务代码 ──ADR-0004 Adapter──→ Authentik API（标准 OIDC/SCIM）
+```
 
-| 候选 | 许可证 | 语言 | 自托管完整度 | K8s 成熟度 | 多租户 | 中文生态 | 资源开销 |
-|------|-------|------|:---:|:---:|:---:|:---:|:---:|
-| **Keycloak** | Apache 2.0 | Java | ★★★★★ | ★★★★★（官方 Operator） | ★★★★ | ★★★★ | 重（JVM） |
-| **Zitadel** | Apache 2.0 | Go | ★★★★★ | ★★★★ | ★★★★★（原生一等公民） | ★★★ | 中 |
-| **Ory（Kratos+Hydra+Keto）** | Apache 2.0 | Go | ★★★★★（纯 OSS） | ★★★★★ | ★★★★ | ★★ | 轻（模块化） |
-| **Authentik** | MIT + Enterprise | Python | ★★★★（部分 Enterprise） | ★★★★ | ★★★ | ★★★ | 中 |
-| **Logto** | MPL 2.0 | TS | ★★★★ | ★★★ | ★★★★ | ★★★ | 轻 |
+### AI 场景覆盖
 
-Casdoor 被硬过滤条件排除（第 2、3 条）。
+| AI 需求 | Authentik 覆盖方式 |
+|--------|------------------|
+| API Key 管理 | Token + Application |
+| 租户 token 配额 | 需网关配合（APISIX `ai-rate-limiting`） |
+| 模型级权限 | Groups + Policies |
+| Agent 工作流服务间认证 | Outpost + Service Account |
 
-## 初步倾向（非最终决策）
+### 部署规划
 
-- **Keycloak**：企业级最成熟、生态最全；代价是 JVM 重
-- **Zitadel**：多租户原生、K8s 现代化、Go 语言与平台其余组件一致
-- **Ory 栈**：最纯粹 OSS、最轻量；代价是模块化带来配置复杂度
-
-最终决策需在独立 PR 中：搭建 POC → 对比功能覆盖度 → 评估与 ADR-0004 Adapter 的契合度 → 决策。
+- 编排位置：`components/authentik/docker-compose.yml`
+- plane: platform, role: iam
+- PG 复用基座实例（`POLARIS_EXTRA_DBS` 新增 `authentik`）
+- 通过 APISIX 反代 `/authentik/` 路径暴露
 
 ## Consequences
 
-- ADR-0004 的 Adapter 抽象价值兑现（切换成本可控）
-- IAM 升级期间保留 Casdoor 并行运行，完成用户/应用迁移后下线
-- 可能触发权限模型重设计（不同 IAM 的 RBAC/ABAC 模型差异）
-
-## Alternatives Considered
-
-### 继续使用 Casdoor
-
-付费墙和商业菜单持续影响团队对开源纯粹性的判断，不符合平台"真开源优先"原则。
-
-### 完全自建 IAM
-
-投入成本与平台快速搭建策略不符，已在 ADR-0004 否决。
-
-### 短期方案：Dex + 外部 IdP
-
-Dex 轻量但本身不管用户库，需要额外 LDAP/OIDC 提供方，不满足"开箱即用平台 IAM"的诉求。
+- ADR-0004 Adapter 抽象价值兑现
+- IAM 管理 UI 零自建成本
+- platform-admin（ADR-0013）通过 OIDC 对接 Authentik SSO 统一登录
+- 降级后备：Keycloak（Apache 2.0，功能最全，JVM 资源重）

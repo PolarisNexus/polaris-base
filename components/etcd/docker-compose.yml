@@ -1,0 +1,27 @@
+services:
+  etcd:
+    image: gcr.io/etcd-development/etcd:v3.5.29
+    restart: unless-stopped
+    profiles: ["platform"]
+    labels:
+      polaris.plane: platform
+      polaris.role: config-store
+    environment:
+      ETCD_ADVERTISE_CLIENT_URLS: http://etcd:2379
+      ETCD_LISTEN_CLIENT_URLS: http://0.0.0.0:2379
+      ETCD_DATA_DIR: /etcd-data
+    volumes:
+      - etcd_data:/etcd-data
+    networks:
+      default: {}
+      polaris-net:
+        aliases:
+          - base-etcd
+    healthcheck:
+      test: ["CMD", "etcdctl", "endpoint", "health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  etcd_data:

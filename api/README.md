@@ -6,7 +6,8 @@
 
 ```
 api/
-├── proto/          ← gRPC Protobuf 定义（当前）
+├── proto/          ← gRPC Protobuf 定义（源）
+├── gen/go/         ← Go + Connect 生成桩（独立 Go module，go.work 聚合）
 └── openapi/        ← OpenAPI 聚合规范（未来）
 ```
 

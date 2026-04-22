@@ -27,10 +27,11 @@ services:
 | `redis/` | Redis | data | cache |
 | `elastic/` | Elasticsearch + Kibana（业务域） | data | search |
 | `minio/` | MinIO | data | object-storage |
-| `apisix/` | Apache APISIX（Standalone，ADR-0002） | platform | gateway |
-| `casdoor/` | Casdoor（待 ADR-0010 重选型） | platform | iam |
+| `etcd/` | etcd（APISIX 配置存储） | platform | config-store |
+| `apisix/` | Apache APISIX（etcd 模式，ADR-0002）+ 内嵌 Coraza WAF（ADR-0012） | platform | gateway |
+| `crowdsec/` | CrowdSec 行为层 Bot/恶意 IP 检测（ADR-0012） | platform | waf-bot |
+| `authentik/` | Authentik（IAM，ADR-0010） | platform | iam |
 | `observability/` | OTel Elasticsearch + OTel Kibana | platform | observability |
-| `safeline/` | SafeLine WAF（暂缓，ADR-0006） | platform | waf |
 
 ## 按 role 查询
 
@@ -70,8 +71,10 @@ make ps / ps-data / ps-platform / ps-services
 | 组件 | 方式 |
 |------|------|
 | elasticsearch / otel-elasticsearch | `*-init` 一次性服务，配置 `kibana_system` 密码后退出 |
-| APISIX | 声明式配置挂载即生效 |
-| Casdoor | 应用自举（连 `postgres` 后自动建表；同 compose 项目，直连短名） |
+| APISIX | etcd 模式，结构配置走 `routes/*.yaml` Git 源 → `apisix-apply-routes.sh` 写 etcd |
+| CrowdSec | 启动时自动装 collections（env `COLLECTIONS`），从 apisix 容器 stdout 读日志 |
+| Authentik | 应用自举（连 `postgres` 后自动迁移；同 compose 项目，直连短名） |
+| etcd | 数据持久化到卷，单节点开发 / 3 节点生产 HA |
 
 ## 命名规约
 

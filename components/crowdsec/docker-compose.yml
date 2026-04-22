@@ -1,0 +1,43 @@
+services:
+  crowdsec:
+    image: crowdsecurity/crowdsec:v1.6.4
+    restart: unless-stopped
+    profiles: ["platform"]
+    labels:
+      polaris.plane: platform
+      polaris.role: waf-bot
+    environment:
+      # 启动时自动安装的集合（从 hub.crowdsec.net）
+      COLLECTIONS: "crowdsecurity/nginx crowdsecurity/base-http-scenarios crowdsecurity/http-cve"
+      # APISIX bouncer 预注册 Key；bouncer 端用同值经 APISIX plugin 调 LAPI
+      BOUNCER_KEY_apisix: ${CROWDSEC_BOUNCER_KEY:-changeme-generate-a-real-bouncer-key}
+      # platform-admin 作为 bouncer 读 /v1/decisions（LAPI 模型：machines 写 alert，bouncers 读 decision）
+      BOUNCER_KEY_platform_admin: ${CROWDSEC_PLATFORM_ADMIN_BOUNCER_KEY:-polaris-dev-bouncer-platform-admin}
+      # platform-admin 管理账号（启动时由 entrypoint 自动注册 machine）
+      AGENT_USERNAME: ${CROWDSEC_AGENT_USERNAME:-platform-admin}
+      AGENT_PASSWORD: ${CROWDSEC_AGENT_PASSWORD:-polaris-dev-agent-password}
+    volumes:
+      - crowdsec_config:/etc/crowdsec
+      - crowdsec_data:/var/lib/crowdsec/data
+      - ./acquis.yaml:/etc/crowdsec/acquis.yaml:ro
+      # 与 APISIX 共享 access.log（components/apisix 声明的 apisix_logs 命名卷）。
+      # 顶层 compose 用 external: true 在此引用，避免两份声明冲突。
+      - apisix_logs:/var/log/apisix:ro
+    networks:
+      default: {}
+      polaris-net:
+        aliases:
+          - base-crowdsec
+    healthcheck:
+      test: ["CMD", "cscli", "lapi", "status"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+volumes:
+  crowdsec_config:
+  crowdsec_data:
+  # 外部引用：真实定义在 components/apisix/docker-compose.yml（共享的 access.log 卷）。
+  # compose include 聚合下两份文件在同一 project 命名空间，指向同一卷。
+  apisix_logs:
+    external: false

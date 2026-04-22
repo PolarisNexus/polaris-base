@@ -1,0 +1,129 @@
+syntax = "proto3";
+
+package polaris.platform_admin.v1;
+
+import "polaris/common/v1/types.proto";
+import "google/protobuf/struct.proto";
+
+option go_package = "github.com/PolarisNexus/polaris-base/api/gen/go/polaris/platform_admin/v1;platform_adminv1";
+
+// GatewayService 封装 APISIX Admin API。
+//
+// 配置分层（ADR-0002）：
+//   - 结构配置（Route/Upstream/SSL/Consumer/Service/GlobalRule）=> Git 源真相，UI 只读
+//   - 运行时策略（插件参数、限流阈值）=> etcd 源真相，UI 直改
+//
+// 本服务只暴露与分层对齐的方法：结构层只有 List/Get；运行时层提供 Update*。
+service GatewayService {
+  // ---------- 结构配置（只读） ----------
+  rpc ListRoutes(ListRoutesRequest) returns (ListRoutesResponse);
+  rpc GetRoute(GetRouteRequest) returns (GetRouteResponse);
+  rpc ListUpstreams(ListUpstreamsRequest) returns (ListUpstreamsResponse);
+  rpc GetUpstream(GetUpstreamRequest) returns (GetUpstreamResponse);
+
+  // ---------- 运行时策略（可写） ----------
+  rpc UpdateRoutePlugins(UpdateRoutePluginsRequest) returns (UpdateRoutePluginsResponse);
+  rpc SetRouteRateLimit(SetRouteRateLimitRequest) returns (SetRouteRateLimitResponse);
+}
+
+// Route 对应 APISIX 路由。plugins 内容可读可部分写（见 UpdateRoutePlugins）。
+message Route {
+  string id = 1;
+  string uri = 2;
+  repeated string hosts = 3;
+  repeated string methods = 4;
+  string upstream_id = 5;
+  // 内联 upstream（与 upstream_id 互斥，APISIX 允许二选一）。
+  Upstream upstream_inline = 6;
+  // 插件配置；任意 JSON 结构，具体 schema 由 APISIX 插件定义。
+  map<string, google.protobuf.Struct> plugins = 7;
+  string service_id = 8;
+  string desc = 9;
+  int32 priority = 10;
+  int64 create_time = 11;
+  int64 update_time = 12;
+}
+
+message Upstream {
+  string id = 1;
+  // 负载均衡类型：roundrobin / chash / least_conn / ewma。
+  string type = 2;
+  // node 地址 → 权重。
+  map<string, int32> nodes = 3;
+  // APISIX scheme: http / https / grpc / grpcs。
+  string scheme = 4;
+  int32 timeout_connect_ms = 5;
+  int32 timeout_send_ms = 6;
+  int32 timeout_read_ms = 7;
+  string desc = 8;
+}
+
+// ---------- 结构配置请求/响应 ----------
+
+message ListRoutesRequest {
+  polaris.common.v1.PageRequest page = 1;
+  // 模糊匹配 uri / desc / id。
+  string query = 2;
+}
+
+message ListRoutesResponse {
+  repeated Route items = 1;
+  polaris.common.v1.PageInfo page_info = 2;
+}
+
+message GetRouteRequest {
+  string id = 1;
+}
+
+message GetRouteResponse {
+  Route route = 1;
+}
+
+message ListUpstreamsRequest {
+  polaris.common.v1.PageRequest page = 1;
+  string query = 2;
+}
+
+message ListUpstreamsResponse {
+  repeated Upstream items = 1;
+  polaris.common.v1.PageInfo page_info = 2;
+}
+
+message GetUpstreamRequest {
+  string id = 1;
+}
+
+message GetUpstreamResponse {
+  Upstream upstream = 1;
+}
+
+// ---------- 运行时策略请求/响应 ----------
+
+message UpdateRoutePluginsRequest {
+  string route_id = 1;
+  // 新的插件集合（整替换路由现有 plugins）。
+  map<string, google.protobuf.Struct> plugins = 2;
+  // 变更原因，写入审计日志。
+  string reason = 3;
+}
+
+message UpdateRoutePluginsResponse {
+  Route route = 1;
+}
+
+message SetRouteRateLimitRequest {
+  string route_id = 1;
+  // 时间窗口内允许的请求数。
+  int32 count = 2;
+  // 时间窗口（秒）。
+  int32 window_seconds = 3;
+  // 限流 key 维度：remote_addr / consumer_name / http_x_user_id 等。
+  string key = 4;
+  // true 表示解除该路由限流。
+  bool disable = 5;
+  string reason = 6;
+}
+
+message SetRouteRateLimitResponse {
+  Route route = 1;
+}

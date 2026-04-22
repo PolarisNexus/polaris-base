@@ -1,0 +1,52 @@
+# Authentik blueprint — platform-admin OIDC Application
+#
+# 声明式建立 platform-admin 的 OAuth2/OIDC Provider + Application。
+# 放入 authentik 容器的 /blueprints/custom/，worker 启动后自动 apply
+# （幂等：identifiers 匹配则更新，不匹配则创建）。
+#
+# 客户端类型：public + PKCE（SPA 标准做法，无 client_secret）
+# ID token 由 BFF 做 JWT 校验（JWKS 从 .well-known/openid-configuration 拉）
+
+version: 1
+metadata:
+  name: polaris-platform-admin
+  labels:
+    blueprints.goauthentik.io/instantiate: "true"
+
+entries:
+  # OAuth2 / OIDC Provider
+  - model: authentik_providers_oauth2.oauth2provider
+    identifiers:
+      name: polaris-platform-admin
+    id: platform_admin_provider
+    attrs:
+      authorization_flow: !Find [authentik_flows.flow, [slug, default-provider-authorization-implicit-consent]]
+      invalidation_flow: !Find [authentik_flows.flow, [slug, default-provider-invalidation-flow]]
+      client_type: public
+      client_id: polaris-platform-admin
+      access_code_validity: minutes=1
+      access_token_validity: hours=1
+      refresh_token_validity: days=7
+      sub_mode: hashed_user_id
+      include_claims_in_id_token: true
+      signing_key: !Find [authentik_crypto.certificatekeypair, [name, authentik Self-signed Certificate]]
+      redirect_uris:
+        - matching_mode: strict
+          url: http://localhost:5173/auth/callback
+        - matching_mode: strict
+          url: http://localhost:8080/auth/callback
+      property_mappings:
+        - !Find [authentik_providers_oauth2.scopemapping, [scope_name, openid]]
+        - !Find [authentik_providers_oauth2.scopemapping, [scope_name, email]]
+        - !Find [authentik_providers_oauth2.scopemapping, [scope_name, profile]]
+
+  # Application (面向终端用户的 launcher 入口)
+  - model: authentik_core.application
+    identifiers:
+      slug: platform-admin
+    attrs:
+      name: Polaris Platform Admin
+      provider: !KeyOf platform_admin_provider
+      meta_launch_url: http://localhost:5173/
+      meta_description: WAF + Gateway 统一管理控制台
+      policy_engine_mode: any

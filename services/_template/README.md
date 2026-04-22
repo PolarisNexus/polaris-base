@@ -62,13 +62,16 @@ pnpm dev
    ```yaml
    - path: ../../services/<service>/docker-compose.yml
    ```
-2. `components/apisix/apisix.yaml` 添加路由：
+2. `components/apisix/routes/` 新增 `NN-<service>.yaml`（ADR-0002 Git 源模型）：
    ```yaml
-   - uri: /api/<service>/*
-     upstream:
-       nodes:
-         "base-<service>:8080": 1
+   routes:
+     - id: <service>
+       uri: /api/<service>/*
+       upstream:
+         nodes:
+           "base-<service>:8080": 1
    ```
+   合入后 CI 跑 `scripts/apisix-apply-routes.sh` 写入 etcd
 3. 更新 `services/README.md` 服务清单
 
 ## 待补充

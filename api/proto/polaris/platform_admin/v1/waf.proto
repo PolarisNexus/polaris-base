@@ -1,0 +1,158 @@
+syntax = "proto3";
+
+package polaris.platform_admin.v1;
+
+import "polaris/common/v1/types.proto";
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/PolarisNexus/polaris-base/api/gen/go/polaris/platform_admin/v1;platform_adminv1";
+
+// WafService 管理 Coraza WAF（APISIX coraza-proxy-wasm 插件）规则与查询攻击日志。
+//
+// 规则启停落地方式：通过 APISIX Admin API 更新 global 或 route 级 coraza 插件配置的
+// SecRuleRemoveById 指令集合。攻击日志由 APISIX http-logger 插件推送至 ES，服务查询 ES。
+service WafService {
+  // ---------- CRS 规则 ----------
+  rpc ListRules(ListRulesRequest) returns (ListRulesResponse);
+  rpc EnableRule(EnableRuleRequest) returns (EnableRuleResponse);
+  rpc DisableRule(DisableRuleRequest) returns (DisableRuleResponse);
+
+  // ---------- 路由级例外（仅对某路由禁用指定规则） ----------
+  rpc ListRouteExceptions(ListRouteExceptionsRequest) returns (ListRouteExceptionsResponse);
+  rpc AddRouteException(AddRouteExceptionRequest) returns (AddRouteExceptionResponse);
+  rpc RemoveRouteException(RemoveRouteExceptionRequest) returns (RemoveRouteExceptionResponse);
+
+  // ---------- 攻击日志（ES 查询） ----------
+  rpc QueryAttackLogs(QueryAttackLogsRequest) returns (QueryAttackLogsResponse);
+}
+
+// Rule CRS 单条规则元数据（启停状态为全局范围）。
+message Rule {
+  int32 id = 1;
+  string name = 2;
+  // 规则类别：sqli / xss / rce / lfi / rfi / scanner / ...
+  string category = 3;
+  // 严重度：critical / error / warning / notice。
+  string severity = 4;
+  // paranoia level 1-4。
+  int32 paranoia_level = 5;
+  bool enabled = 6;
+  // 规则原文出处（CRS 文件名 + 行号）。
+  string source = 7;
+  string description = 8;
+}
+
+// RouteException 路由级规则例外。
+message RouteException {
+  string route_id = 1;
+  // 对该路由禁用的规则 id 列表。
+  repeated int32 rule_ids = 2;
+  string reason = 3;
+  google.protobuf.Timestamp created_at = 4;
+}
+
+// AttackLog 攻击事件条目（由 Coraza 触发，http-logger 入 ES）。
+message AttackLog {
+  google.protobuf.Timestamp timestamp = 1;
+  string client_ip = 2;
+  string host = 3;
+  string uri = 4;
+  string method = 5;
+  int32 rule_id = 6;
+  string rule_message = 7;
+  string severity = 8;
+  // 命中时匹配到的原始片段（可能是 header / body / query 片段）。
+  string matched_data = 9;
+  // 命中后动作：block / log / redirect。
+  string action = 10;
+  string route_id = 11;
+  string request_id = 12;
+}
+
+// ---------- CRS 规则请求/响应 ----------
+
+message ListRulesRequest {
+  polaris.common.v1.PageRequest page = 1;
+  // 类别过滤，空为全部。
+  string category = 2;
+  // 严重度过滤，空为全部。
+  string severity = 3;
+  // 模糊匹配 name / description。
+  string query = 4;
+}
+
+message ListRulesResponse {
+  repeated Rule items = 1;
+  polaris.common.v1.PageInfo page_info = 2;
+}
+
+message EnableRuleRequest {
+  int32 id = 1;
+  string reason = 2;
+}
+
+message EnableRuleResponse {
+  Rule rule = 1;
+}
+
+message DisableRuleRequest {
+  int32 id = 1;
+  string reason = 2;
+}
+
+message DisableRuleResponse {
+  Rule rule = 1;
+}
+
+// ---------- 路由级例外请求/响应 ----------
+
+message ListRouteExceptionsRequest {
+  polaris.common.v1.PageRequest page = 1;
+  // 空则返回所有路由的例外。
+  string route_id = 2;
+}
+
+message ListRouteExceptionsResponse {
+  repeated RouteException items = 1;
+  polaris.common.v1.PageInfo page_info = 2;
+}
+
+message AddRouteExceptionRequest {
+  string route_id = 1;
+  repeated int32 rule_ids = 2;
+  string reason = 3;
+}
+
+message AddRouteExceptionResponse {
+  RouteException exception = 1;
+}
+
+message RemoveRouteExceptionRequest {
+  string route_id = 1;
+  repeated int32 rule_ids = 2;
+  string reason = 3;
+}
+
+message RemoveRouteExceptionResponse {
+  RouteException exception = 1;
+}
+
+// ---------- 攻击日志请求/响应 ----------
+
+message QueryAttackLogsRequest {
+  polaris.common.v1.PageRequest page = 1;
+  polaris.common.v1.TimeRange time_range = 2;
+  // 可选过滤维度。
+  string client_ip = 3;
+  string route_id = 4;
+  int32 rule_id = 5;
+  string severity = 6;
+  // 自由文本搜索（URI / matched_data）。
+  string query = 7;
+  polaris.common.v1.SortOrder order = 8;
+}
+
+message QueryAttackLogsResponse {
+  repeated AttackLog items = 1;
+  polaris.common.v1.PageInfo page_info = 2;
+}

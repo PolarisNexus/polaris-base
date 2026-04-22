@@ -1,0 +1,26 @@
+# 全局访问日志 → Elasticsearch
+#
+# 用途：platform-admin WAF 攻击日志页查询源（ADR-0012 请求层 + ADR-0013 P1）。
+# Coraza 命中时响应 status 为 403 并走此日志；MVP 阶段按 status >= 400 过滤出"攻击"流量。
+# 细粒度规则 ID / severity 字段后续随 coraza-proxy-wasm 响应头扩展。
+#
+# Index：单 index `apisix-access`，生产环境建议在 ES 侧挂 ILM 滚动。
+
+global_rules:
+  - id: access-log
+    plugins:
+      elasticsearch-logger:
+        endpoint_addr: http://base-elasticsearch:9200
+        field:
+          index: apisix-access
+        # ES xpack.security 启用；与 components/elastic/.env 中 ELASTIC_PASSWORD 对齐。
+        # 此处 dev 默认写死；生产改用 APISIX $secret://（Vault/etcd kv）或 $ENV:// 引用，
+        # 避免密码随 Git 源流转（ADR-0007）。
+        auth:
+          username: elastic
+          password: "E&9xV2#pM7@zQ4!y"
+        batch_max_size: 500
+        inactive_timeout: 5
+        buffer_duration: 60
+        include_req_body: false
+        include_resp_body: false

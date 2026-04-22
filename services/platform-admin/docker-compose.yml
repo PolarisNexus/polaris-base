@@ -1,0 +1,38 @@
+services:
+  platform-admin:
+    build:
+      context: ../..
+      dockerfile: services/platform-admin/Dockerfile
+    image: polaris/platform-admin:dev
+    restart: unless-stopped
+    profiles: ["services"]
+    labels:
+      polaris.plane: services
+      polaris.role: admin-console
+    environment:
+      HTTP_ADDR: ":8080"
+      APISIX_ADMIN_URL: "http://base-apisix:9180"
+      APISIX_ADMIN_KEY: "${APISIX_ADMIN_KEY:-edd1c9f034335f136f87ad84b625c8f1}"
+      ELASTIC_URL: "http://base-elasticsearch:9200"
+      ELASTIC_USERNAME: "${ELASTIC_USERNAME:-elastic}"
+      ELASTIC_PASSWORD: "${ELASTIC_PASSWORD:-E&9xV2#pM7@zQ4!y}"
+      CROWDSEC_LAPI_URL: "http://base-crowdsec:8080"
+      CROWDSEC_USERNAME: "${CROWDSEC_AGENT_USERNAME:-platform-admin}"
+      CROWDSEC_PASSWORD: "${CROWDSEC_AGENT_PASSWORD:-changeme-generate-a-real-agent-password}"
+      # LAPI /v1/decisions 走 bouncer 凭据，需与 components/crowdsec 中预注册的 bouncer key 一致
+      CROWDSEC_BOUNCER_KEY: "${CROWDSEC_PLATFORM_ADMIN_BOUNCER_KEY:-polaris-dev-bouncer-platform-admin}"
+      # OIDC issuer 必须与 browser 拿到的 JWT iss 精确匹配。
+      # 浏览器登录 Authentik 时 host 是 localhost:9000，所以 iss = http://localhost:9000/...
+      # BFF 在容器内通过 extra_hosts 走 host-gateway 访问同一地址，保持 iss 一致。
+      OIDC_ISSUER: "${OIDC_ISSUER:-http://localhost:9000/application/o/platform-admin/}"
+      OIDC_CLIENT_ID: "${OIDC_CLIENT_ID:-polaris-platform-admin}"
+      ALLOWED_CORS_ORIGIN: "${PLATFORM_ADMIN_WEB_ORIGIN:-http://localhost:5173}"
+    ports:
+      - "127.0.0.1:${PLATFORM_ADMIN_PORT:-8080}:8080"
+    extra_hosts:
+      - "localhost:host-gateway"
+    networks:
+      default: {}
+      polaris-net:
+        aliases:
+          - platform-admin

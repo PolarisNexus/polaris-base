@@ -1,0 +1,35 @@
+syntax = "proto3";
+
+package polaris.common.v1;
+
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/PolarisNexus/polaris-base/api/gen/go/polaris/common/v1;commonv1";
+
+// PageRequest 通用分页请求参数。
+message PageRequest {
+  // 页号，从 1 开始；0 视为 1。
+  int32 page = 1;
+  // 每页条数，默认 20，最大 200。
+  int32 page_size = 2;
+}
+
+// PageInfo 通用分页响应元数据。
+message PageInfo {
+  int32 page = 1;
+  int32 page_size = 2;
+  int64 total = 3;
+}
+
+// TimeRange 时间区间（闭区间），多数场景用于日志/告警过滤。
+message TimeRange {
+  google.protobuf.Timestamp start = 1;
+  google.protobuf.Timestamp end = 2;
+}
+
+// SortOrder 通用排序方向。
+enum SortOrder {
+  SORT_ORDER_UNSPECIFIED = 0;
+  SORT_ORDER_ASC = 1;
+  SORT_ORDER_DESC = 2;
+}
