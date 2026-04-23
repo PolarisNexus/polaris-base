@@ -1,0 +1,30 @@
+services:
+  crowdsec-bouncer:
+    build:
+      context: ../..
+      dockerfile: services/crowdsec-bouncer/Dockerfile
+    image: polaris/crowdsec-bouncer:dev
+    restart: unless-stopped
+    profiles: ["services"]
+    labels:
+      polaris.plane: services
+      polaris.role: waf-bouncer
+    depends_on:
+      crowdsec:
+        condition: service_healthy
+    environment:
+      CROWDSEC_LAPI_URL: "http://base-crowdsec:8080"
+      # 用 APISIX bouncer 预注册 key（components/crowdsec 的 BOUNCER_KEY_apisix）
+      CROWDSEC_BOUNCER_KEY: "${CROWDSEC_BOUNCER_KEY:-changeme-generate-a-real-bouncer-key}"
+      # LAPI stream 增量轮询间隔；dev 调快方便测，生产 30s~60s
+      CROWDSEC_STREAM_INTERVAL: "${CROWDSEC_STREAM_INTERVAL:-10s}"
+      HTTP_ADDR: ":8080"
+      DEBUG: "${CROWDSEC_BOUNCER_DEBUG:-0}"
+    networks:
+      default: {}
+      polaris-net:
+        aliases:
+          - base-crowdsec-bouncer
+    # 不设 docker healthcheck：distroless 无 sh / curl，且 APISIX forward-auth
+    # 本身会按 per-request 调 /check，bouncer 挂了会体现在 APISIX 错误日志。
+    # 运维监控走 /ready（报告 banlist 条数 + LAPI 拉取状态）。

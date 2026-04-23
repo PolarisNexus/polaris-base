@@ -3,4 +3,5 @@ go 1.23.4
 use (
 	./api/gen/go
 	./services/platform-admin
+	./services/crowdsec-bouncer
 )

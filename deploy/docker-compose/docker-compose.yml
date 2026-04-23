@@ -26,6 +26,7 @@ include:
   - path: ../../components/observability/docker-compose.yml
   # ---------- services plane（自研共享服务）----------
   - path: ../../services/platform-admin/docker-compose.yml
+  - path: ../../services/crowdsec-bouncer/docker-compose.yml
 
 networks:
   polaris-net:

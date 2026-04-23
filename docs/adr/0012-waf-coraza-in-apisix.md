@@ -44,11 +44,22 @@ Accepted（2026-04-19，2026-04-20 补"行为层与 SaaS 分层"）
 
 ### CrowdSec（行为层）
 
-- 读取 APISIX 容器 stdout（`docker` 数据源，零文件挂载）
+- 日志源：APISIX 经 `http_configuration_snippet` 额外写一份 combined 格式 `access.log` 到共享卷 `apisix_logs`（`source: file`）。WSL2 / 部分 Docker Desktop 下 `source: docker` 的 daemon API 协议有兼容问题，故统一走 file。
 - 默认集合：`crowdsecurity/nginx` + `base-http-scenarios` + `http-cve`
-- LAPI 暴露 `/v1/decisions`，APISIX 通过 Lua bouncer 每请求查询
 - 社区 CTI：自动订阅社区黑名单（已知扫描器 / 僵尸网络 IP）
-- K8s 迁移时改用 DaemonSet + journald 数据源
+- K8s 迁移时改用 DaemonSet + file tailer 指向共享 EmptyDir 即可
+
+#### bouncer 生效路径（2026-04-23 P2 落地）
+
+APISIX 通过 [forward-auth 插件](https://apisix.apache.org/docs/apisix/plugins/forward-auth/) 按请求调侧车 `services/crowdsec-bouncer`（Go）。
+bouncer 在内存里维护 LAPI `/v1/decisions/stream` 的增量快照（启动时 `startup=true` 全量、之后 10s `startup=false` 增量），每请求 `O(N)` 扫描未过期 ban（N 通常 <万量级，单请求延迟 <1ms）。
+
+**为何不走官方 `lua-resty-crowdsec` 直接塞进 APISIX 插件目录**：
+- 栈统一：我们已在 Go，新增一份 Lua 源码 + 插件注册会扩大 CI / 升级面；
+- 解耦：forward-auth 语义清晰，将来替换决策源（AI Gateway token 配额、自研策略引擎）不动 APISIX 侧；
+- 失败语义可选：bouncer 不可达时 APISIX forward-auth 默认 fail-open（ADR-0012 可用性优于风控），生产可通过降低 `timeout` + 告警收紧。
+
+**客户端 IP 解析**：APISIX 默认用 TCP 源地址作 `$http_x_forwarded_for`；生产部署在 LB / CDN 后需配 `nginx_config.http.real_ip_header: X-Forwarded-For` 和 `real_ip_from` 信任网段，否则 bouncer 看到的永远是 LB IP，决策失效。
 
 ### Turnstile（人机验证）
 

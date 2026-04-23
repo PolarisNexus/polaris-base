@@ -21,6 +21,7 @@ polaris-base/
 │   └── observability/      OTel ES + Kibana    (plane: platform)
 ├── services/               自研共享业务服务（Go + React + AntD Pro，见 ADR-0011）
 │   ├── platform-admin/     WAF + Gateway 管理控制台（ADR-0013）
+│   ├── crowdsec-bouncer/   APISIX forward-auth 侧车，执行 CrowdSec 决策（ADR-0012）
 │   ├── README.md
 │   └── _template/          新服务脚手架
 ├── deploy/docker-compose/  顶层 compose 入口 + .env（默认 profile 激活）
@@ -51,7 +52,7 @@ make ps-data    # 过滤 data plane 容器视图
 |-------|------|------|
 | **data** | postgres / redis / elastic / minio | relational-db / cache / search / object-storage |
 | **platform** | etcd / apisix / crowdsec / authentik / observability | config-store / gateway / waf-bot / iam / observability |
-| **services** | services/<svc> | 各自业务 role |
+| **services** | platform-admin / crowdsec-bouncer | admin-console / waf-bouncer |
 
 每个 compose 服务自带：
 
