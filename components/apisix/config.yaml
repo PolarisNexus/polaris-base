@@ -12,6 +12,18 @@ apisix:
 # 这里追加一份文件日志，写到共享卷 /var/log/apisix/，CrowdSec file source 读同一路径。
 # 不影响原有 stdout 与 elasticsearch-logger（平行三份）。
 nginx_config:
+  http:
+    # 信任上游 LB / CDN 的 X-Forwarded-For，nginx 会把 $remote_addr 替换为
+    # XFF 链里最右侧 "非 trusted" 的 IP（真正的客户端）。
+    # 没有这一段时：APISIX 把 TCP 源地址当客户端 IP，所有经 LB 的流量在 bouncer 看起来都来自 LB。
+    # 生产把下面的段替换成实际 LB 的网段（Cloudflare 官方 IP 段、ELB VPC CIDR、NLB hairpin 等）。
+    real_ip_header: X-Forwarded-For
+    real_ip_recursive: "on"
+    real_ip_from:
+      - 127.0.0.1        # loopback
+      - 172.16.0.0/12    # docker bridge（dev 栈）
+      - 10.0.0.0/8       # 常见内网段（生产 LB 多在此）
+      - 192.168.0.0/16
   # APISIX 默认 main 格式带 upstream / apisix_request_id 等扩展字段，CrowdSec nginx parser 不认。
   # 保持默认 access_log 写 stdout（docker logs 可见），追加一份 combined 格式写文件供 CrowdSec 读。
   http_configuration_snippet: |

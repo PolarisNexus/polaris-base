@@ -3,13 +3,9 @@
 # 每请求先调 services/crowdsec-bouncer 的 /check，403 直接挡，200 继续走 Coraza + 业务。
 # bouncer 内存缓存 LAPI decisions，10s 增量刷新；单请求延迟实测 <1ms。
 #
-# 客户端 IP 解析：APISIX 默认用 TCP 源地址（$remote_addr）做 $http_x_forwarded_for 的值，
-# 生产部署在 LB / CDN 后面时，需要在 config.yaml 配 nginx real_ip：
-#   nginx_config.http.real_ip_header: X-Forwarded-For
-#   nginx_config.http.real_ip_from:
-#     - 10.0.0.0/8       # 信任的上游网段
-#     - 172.16.0.0/12
-# 否则 bouncer 看到的永远是 LB 的地址，CrowdSec 的决策失效。
+# 客户端 IP 解析：依赖 components/apisix/config.yaml 的 nginx_config.http.real_ip_*。
+# 信任列表默认含 docker bridge + RFC1918 常见段；生产部署要替换为实际 LB / CDN 网段，
+# 信任过宽会让客户端伪造 XFF 绕过决策，过窄则 bouncer 永远看到 LB 的地址。
 #
 # 调整路径（ADR-0002）：编辑本文件 → PR → CI apply → etcd。
 # 临时停用整个 WAF 行为层：删除或注释本 global_rule，然后 apply。
