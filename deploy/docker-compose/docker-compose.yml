@@ -27,6 +27,8 @@ include:
   # ---------- services plane（自研共享服务）----------
   - path: ../../services/platform-admin/docker-compose.yml
   - path: ../../services/crowdsec-bouncer/docker-compose.yml
+  # ai-mock 是 dev-only（profile=dev），默认启动不带起；ADR-0014 Phase I 冒烟依赖
+  - path: ../../services/ai-mock/docker-compose.yml
 
 networks:
   polaris-net:

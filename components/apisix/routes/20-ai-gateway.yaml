@@ -1,0 +1,151 @@
+# AI Gateway 路由（ADR-0014 Phase I MVP）
+#
+# URL 模式：/ai/v1/<provider>/{chat/completions,embeddings}
+# 每条路由一个 ai-proxy 插件实例；provider URL 直接标识上游家族，
+# 不做按 body.model 跨家族路由（APISIX 3.16 ai-proxy-multi 不原生支持）。
+#
+# dev 阶段所有 override.endpoint 指向 base-ai-mock 冒烟；
+# 生产 apply 时把 endpoint 换成真实 provider + 注入真实 API key。
+# API key 现在以明文占位符入 etcd，Phase III 走 secret:// + Vault（ADR-0007）。
+#
+# 用量日志：每条 AI route 内联 elasticsearch-logger 插件，写入 `ai-usage` index
+# （与 apisix-access 分开）；include_resp_body=true 以便 BFF 解析 usage.{prompt,completion}_tokens。
+# 不用 global_rule + filter —— global_rule 级别不支持 _meta.filter（APISIX schema 限制）。
+#
+# 认证：/ai/v1/* 的 OIDC（Authentik JWT）校验在独立 global_rule 挂载，见 21-ai-oidc.yaml（待实现）。
+
+# -------------------- 以下 YAML 锚点用于共享 ai-proxy-multi 下游的 ES usage logger 配置 --------------------
+# 注：apply 脚本基于 yq，锚点会被展开后进 etcd；但为便于 review，本文件保持可读的重复写法。
+
+routes:
+  # -------------------- OpenAI --------------------
+  - id: ai-openai-chat
+    uri: /ai/v1/openai/chat/completions
+    methods: [POST]
+    plugins:
+      ai-proxy:
+        provider: openai
+        auth:
+          header:
+            Authorization: "Bearer sk-dev-mock-no-real-key"
+        override:
+          endpoint: "http://base-ai-mock:8080"
+      elasticsearch-logger:
+        endpoint_addr: http://base-elasticsearch:9200
+        field: { index: ai-usage }
+        auth: { username: elastic, password: "E&9xV2#pM7@zQ4!y" }
+        include_req_body: true
+        include_resp_body: true
+        batch_max_size: 100
+        inactive_timeout: 5
+        buffer_duration: 30
+
+  - id: ai-openai-embeddings
+    uri: /ai/v1/openai/embeddings
+    methods: [POST]
+    plugins:
+      ai-proxy:
+        provider: openai
+        auth:
+          header:
+            Authorization: "Bearer sk-dev-mock-no-real-key"
+        override:
+          endpoint: "http://base-ai-mock:8080"
+      elasticsearch-logger:
+        endpoint_addr: http://base-elasticsearch:9200
+        field: { index: ai-usage }
+        auth: { username: elastic, password: "E&9xV2#pM7@zQ4!y" }
+        include_req_body: true
+        include_resp_body: true
+        batch_max_size: 100
+        inactive_timeout: 5
+        buffer_duration: 30
+
+  # -------------------- Claude / Anthropic --------------------
+  # URL 路径用 `claude`（用户习惯），插件 provider 值是 `anthropic`（APISIX schema 的 enum）。
+  - id: ai-claude-chat
+    uri: /ai/v1/claude/chat/completions
+    methods: [POST]
+    plugins:
+      ai-proxy:
+        provider: anthropic
+        auth:
+          header:
+            x-api-key: "sk-ant-dev-mock-no-real-key"
+        override:
+          endpoint: "http://base-ai-mock:8080"
+      elasticsearch-logger:
+        endpoint_addr: http://base-elasticsearch:9200
+        field: { index: ai-usage }
+        auth: { username: elastic, password: "E&9xV2#pM7@zQ4!y" }
+        include_req_body: true
+        include_resp_body: true
+        batch_max_size: 100
+        inactive_timeout: 5
+        buffer_duration: 30
+
+  # -------------------- DeepSeek --------------------
+  - id: ai-deepseek-chat
+    uri: /ai/v1/deepseek/chat/completions
+    methods: [POST]
+    plugins:
+      ai-proxy:
+        provider: deepseek
+        auth:
+          header:
+            Authorization: "Bearer sk-deepseek-dev-mock-no-real-key"
+        override:
+          endpoint: "http://base-ai-mock:8080"
+      elasticsearch-logger:
+        endpoint_addr: http://base-elasticsearch:9200
+        field: { index: ai-usage }
+        auth: { username: elastic, password: "E&9xV2#pM7@zQ4!y" }
+        include_req_body: true
+        include_resp_body: true
+        batch_max_size: 100
+        inactive_timeout: 5
+        buffer_duration: 30
+
+  # -------------------- Qwen（通过 DashScope 的 OpenAI 兼容接口） --------------------
+  # 生产 endpoint: https://dashscope.aliyuncs.com/compatible-mode
+  - id: ai-qwen-chat
+    uri: /ai/v1/qwen/chat/completions
+    methods: [POST]
+    plugins:
+      ai-proxy:
+        provider: openai-compatible
+        auth:
+          header:
+            Authorization: "Bearer sk-qwen-dev-mock-no-real-key"
+        override:
+          endpoint: "http://base-ai-mock:8080"
+      elasticsearch-logger:
+        endpoint_addr: http://base-elasticsearch:9200
+        field: { index: ai-usage }
+        auth: { username: elastic, password: "E&9xV2#pM7@zQ4!y" }
+        include_req_body: true
+        include_resp_body: true
+        batch_max_size: 100
+        inactive_timeout: 5
+        buffer_duration: 30
+
+  - id: ai-qwen-embeddings
+    uri: /ai/v1/qwen/embeddings
+    methods: [POST]
+    plugins:
+      ai-proxy:
+        provider: openai-compatible
+        auth:
+          header:
+            Authorization: "Bearer sk-qwen-dev-mock-no-real-key"
+        override:
+          endpoint: "http://base-ai-mock:8080"
+      elasticsearch-logger:
+        endpoint_addr: http://base-elasticsearch:9200
+        field: { index: ai-usage }
+        auth: { username: elastic, password: "E&9xV2#pM7@zQ4!y" }
+        include_req_body: true
+        include_resp_body: true
+        batch_max_size: 100
+        inactive_timeout: 5
+        buffer_duration: 30

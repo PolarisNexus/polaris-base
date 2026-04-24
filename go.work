@@ -4,4 +4,5 @@ use (
 	./api/gen/go
 	./services/platform-admin
 	./services/crowdsec-bouncer
+	./services/ai-mock
 )

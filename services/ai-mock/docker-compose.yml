@@ -1,0 +1,21 @@
+services:
+  ai-mock:
+    build:
+      context: ../..
+      dockerfile: services/ai-mock/Dockerfile
+    image: polaris/ai-mock:dev
+    restart: unless-stopped
+    # dev-only profile：生产不该启动这个服务。默认 profile (data,platform,services)
+    # 不包含 'dev'，因此 `docker compose up -d` 一行启动不会带起；需要时
+    # `COMPOSE_PROFILES=dev,services docker compose up -d ai-mock`
+    profiles: ["dev"]
+    labels:
+      polaris.plane: services
+      polaris.role: ai-mock
+    environment:
+      HTTP_ADDR: ":8080"
+    networks:
+      default: {}
+      polaris-net:
+        aliases:
+          - base-ai-mock
