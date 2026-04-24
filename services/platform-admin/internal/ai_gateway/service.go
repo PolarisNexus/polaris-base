@@ -68,9 +68,10 @@ func (s *Service) QueryUsage(ctx context.Context, req *connect.Request[v1.QueryU
 	}
 
 	must := []map[string]any{}
-	// URL 匹配 /ai/v1/<provider>/* 的流量
+	// elasticsearch-logger 把 request.uri 写成 text 分词字段，text 上的 prefix
+	// 匹配的是 token 前缀，不认 "/ai/v1/"；必须用 .keyword 子字段。
 	must = append(must, map[string]any{
-		"prefix": map[string]any{"request.uri": "/ai/v1/"},
+		"prefix": map[string]any{"request.uri.keyword": "/ai/v1/"},
 	})
 	if tr := req.Msg.GetTimeRange(); tr != nil {
 		r := map[string]any{}
@@ -85,7 +86,7 @@ func (s *Service) QueryUsage(ctx context.Context, req *connect.Request[v1.QueryU
 		}
 	}
 	if p := req.Msg.GetProvider(); p != "" {
-		must = append(must, map[string]any{"prefix": map[string]any{"request.uri": "/ai/v1/" + p + "/"}})
+		must = append(must, map[string]any{"prefix": map[string]any{"request.uri.keyword": "/ai/v1/" + p + "/"}})
 	}
 
 	sortOrder := "desc"

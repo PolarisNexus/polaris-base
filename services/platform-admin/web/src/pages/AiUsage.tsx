@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
-import { Table, Typography, Alert, Tag, Space, Row, Col, Statistic, Select, Input, Button, Card } from "antd";
+import { Table, Typography, Alert, Tag, Space, Row, Col, Statistic, Select, Input, Button, Card, message } from "antd";
 import { aiGatewayApi, QueryUsageReq, UsageRecord, UsageSummary } from "../api/aiGateway";
+import { getToken } from "../auth/oidc";
 
 const PROVIDERS = ["", "openai", "claude", "deepseek", "qwen"];
 
@@ -32,6 +33,48 @@ export default function AiUsagePage() {
   }, []);
 
   const apply = () => load(filter);
+
+  // 用当前登录会话的 JWT，直接打 APISIX 的 AI Gateway 一次 chat；
+  // 回来后等 10s ES flush 再刷新 Usage 表。
+  const sendTest = async (provider: string) => {
+    const token = getToken();
+    if (!token) {
+      message.error("未登录或 token 已过期");
+      return;
+    }
+    const modelByProvider: Record<string, string> = {
+      openai: "gpt-4o-mini",
+      claude: "claude-3-5-sonnet",
+      deepseek: "deepseek-chat",
+      qwen: "qwen-max",
+    };
+    try {
+      // 走 Vite 代理 /ai/v1/* → APISIX :9080，避免浏览器 CORS
+      const resp = await fetch(`/ai/v1/${provider}/chat/completions`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          model: modelByProvider[provider],
+          messages: [{ role: "user", content: `AI Gateway 冒烟测试 @ ${new Date().toLocaleTimeString("zh-CN")}` }],
+        }),
+      });
+      if (!resp.ok) {
+        message.error(`${provider} 返回 ${resp.status}`);
+        return;
+      }
+      const data = await resp.json();
+      const usage = data?.usage ?? {};
+      message.success(
+        `${provider} OK · model=${data?.model} · tokens=${usage.prompt_tokens}+${usage.completion_tokens}=${usage.total_tokens}`,
+      );
+      setTimeout(() => load(filter), 8000);
+    } catch (e) {
+      message.error(`${provider} 请求失败：${(e as Error).message}`);
+    }
+  };
 
   return (
     <Space direction="vertical" style={{ width: "100%" }} size="middle">
@@ -82,6 +125,19 @@ export default function AiUsagePage() {
         />
         <Button type="primary" onClick={apply}>查询</Button>
       </Space>
+
+      <Card size="small" title="AI Gateway 冒烟测试（用当前会话 JWT 发一次 chat）">
+        <Space wrap>
+          {PROVIDERS.filter((p) => p).map((p) => (
+            <Button key={p} onClick={() => sendTest(p)}>
+              测试 {p}
+            </Button>
+          ))}
+          <Typography.Text type="secondary">
+            点击后 ~8s 自动刷新下方表格
+          </Typography.Text>
+        </Space>
+      </Card>
 
       {err && <Alert type="error" message={err} showIcon />}
 
