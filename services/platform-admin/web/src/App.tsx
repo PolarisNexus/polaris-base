@@ -4,6 +4,9 @@ import RoutesPage from "./pages/Routes";
 import BotDecisionsPage from "./pages/BotDecisions";
 import BotAlertsPage from "./pages/BotAlerts";
 import WafAttackLogsPage from "./pages/WafAttackLogs";
+import AiProvidersPage from "./pages/AiProviders";
+import AiUsagePage from "./pages/AiUsage";
+import AiQuotasPage from "./pages/AiQuotas";
 import AuthCallback from "./pages/AuthCallback";
 import LoginPage from "./pages/Login";
 import { useAuth } from "./auth/AuthContext";
@@ -32,6 +35,15 @@ function Shell() {
                 { key: "bot-decisions", label: <Link to="/bot-decisions">Bot 决策</Link> },
                 { key: "bot-alerts", label: <Link to="/bot-alerts">Bot 告警</Link> },
                 { key: "waf-rules", label: <span style={{ opacity: 0.5 }}>规则 · 下一阶段</span>, disabled: true },
+              ],
+            },
+            {
+              key: "ai",
+              label: "AI 代理",
+              children: [
+                { key: "ai-providers", label: <Link to="/ai-providers">Providers</Link> },
+                { key: "ai-usage", label: <Link to="/ai-usage">Usage</Link> },
+                { key: "ai-quotas", label: <Link to="/ai-quotas">Quotas</Link> },
               ],
             },
             {
@@ -72,6 +84,9 @@ function Shell() {
             <Route path="/bot-decisions" element={<BotDecisionsPage />} />
             <Route path="/bot-alerts" element={<BotAlertsPage />} />
             <Route path="/waf-attacks" element={<WafAttackLogsPage />} />
+            <Route path="/ai-providers" element={<AiProvidersPage />} />
+            <Route path="/ai-usage" element={<AiUsagePage />} />
+            <Route path="/ai-quotas" element={<AiQuotasPage />} />
           </Routes>
         </Layout.Content>
       </Layout>

@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"github.com/PolarisNexus/polaris-base/api/gen/go/polaris/platform_admin/v1/platform_adminv1connect"
+	"github.com/PolarisNexus/polaris-base/services/platform-admin/internal/ai_gateway"
 	"github.com/PolarisNexus/polaris-base/services/platform-admin/internal/auth"
 	"github.com/PolarisNexus/polaris-base/services/platform-admin/internal/bot"
 	"github.com/PolarisNexus/polaris-base/services/platform-admin/internal/gateway"
@@ -17,7 +18,7 @@ type Options struct {
 }
 
 // Mux 装配 Connect handler + healthz，按 Options 叠加鉴权与 CORS。
-func Mux(gw *gateway.Service, wf *waf.Service, bt *bot.Service, opt Options) http.Handler {
+func Mux(gw *gateway.Service, wf *waf.Service, bt *bot.Service, ai *ai_gateway.Service, opt Options) http.Handler {
 	mux := http.NewServeMux()
 
 	path, handler := platform_adminv1connect.NewGatewayServiceHandler(gw)
@@ -27,6 +28,9 @@ func Mux(gw *gateway.Service, wf *waf.Service, bt *bot.Service, opt Options) htt
 	mux.Handle(path, handler)
 
 	path, handler = platform_adminv1connect.NewBotServiceHandler(bt)
+	mux.Handle(path, handler)
+
+	path, handler = platform_adminv1connect.NewAiGatewayServiceHandler(ai)
 	mux.Handle(path, handler)
 
 	mux.HandleFunc("/healthz", func(w http.ResponseWriter, _ *http.Request) {

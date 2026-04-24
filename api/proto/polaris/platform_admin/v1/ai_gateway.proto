@@ -1,0 +1,106 @@
+syntax = "proto3";
+
+package polaris.platform_admin.v1;
+
+import "polaris/common/v1/types.proto";
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/PolarisNexus/polaris-base/api/gen/go/polaris/platform_admin/v1;platform_adminv1";
+
+// AiGatewayService 管理 APISIX `ai-proxy` provider 路由与用量查询（ADR-0014 Phase I MVP）。
+//
+// MVP 仅读：Provider 列表是静态配置、Usage 从 ES `ai-usage` index 查。
+// Quota 管理（创建/更新/删除）延到 Phase II；当前 ListQuotas 返回空占位。
+service AiGatewayService {
+  // Provider 列表（静态 —— 来自 components/apisix/routes/20-ai-gateway.yaml 的映射）
+  rpc ListProviders(ListProvidersRequest) returns (ListProvidersResponse);
+
+  // 用量查询（ES ai-usage index）
+  rpc QueryUsage(QueryUsageRequest) returns (QueryUsageResponse);
+
+  // Quota 占位（Phase II 实现）
+  rpc ListQuotas(ListQuotasRequest) returns (ListQuotasResponse);
+}
+
+// ---------- Providers ----------
+
+message Provider {
+  // 短 id（URL 段）：openai / claude / deepseek / qwen
+  string id = 1;
+  // 展示名：OpenAI / Claude / DeepSeek / Qwen
+  string display_name = 2;
+  // APISIX 内部 provider 类型（openai / anthropic / deepseek / openai-compatible）
+  string apisix_provider = 3;
+  // 客户端 baseURL 前缀
+  string base_url = 4;
+  // 支持的端点（chat/completions、embeddings）
+  repeated string supported_paths = 5;
+  // dev / active / disabled
+  string status = 6;
+  // 真实上游 endpoint（dev 下全部指向 ai-mock）
+  string upstream_endpoint = 7;
+}
+
+message ListProvidersRequest {}
+message ListProvidersResponse {
+  repeated Provider items = 1;
+}
+
+// ---------- Usage ----------
+
+message UsageRecord {
+  google.protobuf.Timestamp timestamp = 1;
+  // 用户标识：优先 JWT sub（X-Userinfo 头），退化到 client_ip
+  string user = 2;
+  string provider = 3;
+  string model = 4;
+  int32 prompt_tokens = 5;
+  int32 completion_tokens = 6;
+  int32 total_tokens = 7;
+  int32 status_code = 8;
+  double latency_ms = 9;
+  string request_id = 10;
+}
+
+message QueryUsageRequest {
+  polaris.common.v1.TimeRange time_range = 1;
+  string user = 2;
+  string provider = 3;
+  string model = 4;
+  polaris.common.v1.PageRequest page = 5;
+  polaris.common.v1.SortOrder order = 6;
+}
+
+// UsageSummary 顶级聚合（按 provider / 总和），方便前端卡片展示。
+message UsageSummary {
+  int64 total_requests = 1;
+  int64 total_prompt_tokens = 2;
+  int64 total_completion_tokens = 3;
+  // key = provider id
+  map<string, int64> requests_by_provider = 4;
+  // key = user（JWT sub 或 client_ip）
+  map<string, int64> requests_by_user = 5;
+}
+
+message QueryUsageResponse {
+  repeated UsageRecord items = 1;
+  polaris.common.v1.PageInfo page_info = 2;
+  UsageSummary summary = 3;
+}
+
+// ---------- Quotas（Phase II 占位） ----------
+
+message Quota {
+  string id = 1;
+  string user = 2;
+  int64 daily_token_limit = 3;
+  int64 used_today = 4;
+  string window = 5; // "1d" / "1h" 等
+}
+
+message ListQuotasRequest {}
+message ListQuotasResponse {
+  repeated Quota items = 1;
+  // Phase II 未实现时 phase_note 给前端渲染占位说明
+  string phase_note = 2;
+}

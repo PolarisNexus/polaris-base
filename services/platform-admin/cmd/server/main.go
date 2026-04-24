@@ -7,6 +7,7 @@ import (
 	"golang.org/x/net/http2"
 	"golang.org/x/net/http2/h2c"
 
+	"github.com/PolarisNexus/polaris-base/services/platform-admin/internal/ai_gateway"
 	"github.com/PolarisNexus/polaris-base/services/platform-admin/internal/auth"
 	"github.com/PolarisNexus/polaris-base/services/platform-admin/internal/bot"
 	"github.com/PolarisNexus/polaris-base/services/platform-admin/internal/config"
@@ -21,9 +22,11 @@ func main() {
 		log.Fatalf("config: %v", err)
 	}
 
+	esClient := waf.NewESClient(cfg.ElasticURL, cfg.ElasticUser, cfg.ElasticPassword)
 	gwSvc := gateway.NewService(gateway.NewClient(cfg.ApisixAdminURL, cfg.ApisixAdminKey))
-	wfSvc := waf.NewService(waf.NewESClient(cfg.ElasticURL, cfg.ElasticUser, cfg.ElasticPassword))
+	wfSvc := waf.NewService(esClient)
 	btSvc := bot.NewService(bot.NewClient(cfg.CrowdsecLAPIURL, cfg.CrowdsecUser, cfg.CrowdsecPassword, cfg.CrowdsecBouncerKey))
+	aiSvc := ai_gateway.NewService(esClient)
 
 	opt := server.Options{AllowOrigin: cfg.AllowedCORS}
 	if cfg.AuthDisabled {
@@ -32,7 +35,7 @@ func main() {
 		opt.Verifier = auth.NewVerifier(cfg.OIDCIssuer, cfg.OIDCClientID)
 		log.Printf("OIDC verifier: issuer=%s audience=%s", cfg.OIDCIssuer, cfg.OIDCClientID)
 	}
-	handler := server.Mux(gwSvc, wfSvc, btSvc, opt)
+	handler := server.Mux(gwSvc, wfSvc, btSvc, aiSvc, opt)
 
 	// h2c 以支持 gRPC 明文（APISIX 背后已终止 TLS）。
 	srv := &http.Server{
