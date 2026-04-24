@@ -20,6 +20,13 @@ services:
       CROWDSEC_STREAM_INTERVAL: "${CROWDSEC_STREAM_INTERVAL:-10s}"
       HTTP_ADDR: ":8080"
       DEBUG: "${CROWDSEC_BOUNCER_DEBUG:-0}"
+      # Turnstile 挑战页（captcha 决策用）。默认 Cloudflare dev 测试 key —— 总是通过，生产必须覆盖
+      TURNSTILE_SITE_KEY: "${TURNSTILE_SITE_KEY:-1x00000000000000000000AA}"
+      TURNSTILE_SECRET_KEY: "${TURNSTILE_SECRET_KEY:-1x0000000000000000000000000000000AA}"
+      # 挑战 cookie HMAC 签名 secret 与 TTL；HTTPS 生产设 CAPTCHA_COOKIE_SECURE=1
+      CAPTCHA_COOKIE_SECRET: "${CAPTCHA_COOKIE_SECRET:-polaris-dev-cookie-secret-change-in-prod}"
+      CAPTCHA_COOKIE_TTL: "${CAPTCHA_COOKIE_TTL:-1h}"
+      CAPTCHA_COOKIE_SECURE: "${CAPTCHA_COOKIE_SECURE:-0}"
     networks:
       default: {}
       polaris-net:

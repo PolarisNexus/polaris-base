@@ -18,15 +18,20 @@ global_rules:
     plugins:
       forward-auth:
         uri: http://base-crowdsec-bouncer:8080/check
-        # 仅把定位客户端 IP 需要的头透传给 bouncer，其他保持最小集
+        # 透传给 bouncer 的头：
+        #   - XFF / XRI：定位客户端 IP
+        #   - Cookie：bouncer 检查 captcha 通过凭证（polaris_captcha_pass HMAC）
         request_headers:
           - X-Forwarded-For
           - X-Real-IP
           - X-Original-Forwarded-For
-        # bouncer 拦截时把自定义头透传到客户端，方便调试/监控
+          - Cookie
+        # bouncer 拦截 / 挑战时把自定义头透传到客户端，方便调试/监控
         client_headers:
           - X-Polaris-Bouncer
           - X-Polaris-Bouncer-Scenario
+          - Set-Cookie
+          - Content-Type
         # bouncer 不可达时 fail-open：网关功能优先（ADR-0012 可用性优于风控）
         # 若要 fail-closed，去掉 keepalive、把 timeout 降低并靠错误日志告警
         timeout: 2000

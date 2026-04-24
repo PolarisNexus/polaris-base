@@ -1,0 +1,19 @@
+# Captcha 验证回调（ADR-0012 行为层 P2）
+#
+# 挑战页用 Turnstile 拿 token，form POST 到此 URI；APISIX 把 /__polaris/captcha/verify
+# 代理到 bouncer 的 /captcha/verify，bouncer 调 CF siteverify 后发 cookie。
+#
+# forward-auth global_rule 仍作用于本路由，但 bouncer 的 /check 会看到
+# X-Forwarded-Uri=/__polaris/* 直接放行，不会循环挑战。
+routes:
+  - id: captcha-verify
+    uri: /__polaris/captcha/verify
+    methods:
+      - POST
+    upstream:
+      type: roundrobin
+      nodes:
+        "base-crowdsec-bouncer:8080": 1
+    plugins:
+      proxy-rewrite:
+        uri: /captcha/verify
