@@ -71,5 +71,5 @@ labels:
 
 ## 相关文档
 
-- [架构决策记录](docs/adr/)（核心：ADR-0001、ADR-0002、ADR-0005、ADR-0009、ADR-0010、ADR-0011、ADR-0012、ADR-0013）
+- [架构决策记录](docs/adr/)（核心：ADR-0001、ADR-0002、ADR-0005、ADR-0009、ADR-0010、ADR-0011、ADR-0012、ADR-0013、ADR-0014）
 - 平台顶层技术栈：`docs/architecture/`

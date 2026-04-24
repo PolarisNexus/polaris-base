@@ -18,6 +18,7 @@
 | [0011](0011-common-services-stack.md) | Commons 自研共享服务技术栈 | Accepted |
 | [0012](0012-waf-coraza-in-apisix.md) | WAF——Coraza-in-APISIX | Accepted |
 | [0013](0013-platform-admin-console.md) | platform-admin 统一管理控制台 | Accepted |
+| [0014](0014-ai-gateway.md) | AI Gateway—— `ai-proxy-multi` + 按用户配额 | Accepted（Phase I MVP） |
 
 ## 新增 ADR
 
