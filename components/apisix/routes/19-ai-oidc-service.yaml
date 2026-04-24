@@ -1,0 +1,56 @@
+# AI Gateway 共享服务：OIDC (Authentik JWT) + usage 日志
+#
+# APISIX "service" 把 AI 路由共享的插件集合抽出来，6 条路由 service_id 引用，
+# 不用每路由重复 ~20 行配置。provider 各异的 ai-proxy 仍在路由级别单独写。
+#
+# JWT 校验走 static public_key + valid_issuers 白名单：
+#   - bearer_only=true 走 API 模式，不做 OIDC 浏览器跳转
+#   - public_key: 从 Authentik 的 OAuth2Provider.signing_key 抽出来（见 README）
+#     避免 APISIX 动态 discovery —— Authentik 的 issuer 依赖请求 Host header，
+#     APISIX 容器内 localhost 已被 docker 的 127.0.0.1 占用
+#   - claim_validator.issuer.valid_issuers 白名单浏览器实际看到的 iss
+#   - discovery 字段仍必填（APISIX schema 要求），valid_issuers 覆盖其 iss 检查，
+#     public_key 覆盖其 JWKS 签名检查，实际不被访问
+#
+# 轮换：Authentik 签名证书到期前更新 public_key，然后 bash scripts/apisix-apply-routes.sh。
+
+services:
+  - id: ai-gateway-shared
+    plugins:
+      openid-connect:
+        discovery: "http://base-authentik:9000/application/o/platform-admin/.well-known/openid-configuration"
+        bearer_only: true
+        client_id: "polaris-platform-admin"
+        client_secret: "unused-for-public-client"
+        token_signing_alg_values_expected: "RS256"
+        public_key: |
+          -----BEGIN PUBLIC KEY-----
+          MIICIjANBgkqhkiG9w0BAQEFAAOCAg8AMIICCgKCAgEAyIer1G+Hn1DW3j9aUFLg
+          IWtn7i6FA2PKnSSBHe9T17A1Uvdjp6ePZAkN2QnZegxpEggB6UeOwZGDOzSaXKQG
+          JL/lXsKV1uGuk1LkrI2VWwvOP0hoK0PSht5+jI+tgLBihI0L86XnvCusdq7Ouidk
+          eArJyXRijz1XeHPTBI4I+3fAkUlIDdW+inLXjEIfzdvOJCSY9eLdZS/UcPjq2CWm
+          GSJmwe/OslhIRKP2g2TmJkkUTh9IFus+b9TgPkTdM0M8fYVUPeK7vhf+I6QgrYzX
+          /43L+UeyiOfAMGGz/oQgQnusjp8h1DbEgdZSsT1BCtijl8FWinJ6Sss/8+S6jZGv
+          vU0Sx7DLVetkFZRJMKtfea1IHg643ywXRRCzILBXL8JmYoLRpfaxzg+sjn6g3232
+          WXJHzCHaRv8bWB2mMG5fq7qLpo7PheKDLk3wwyVO3TeshSEf7H4AR2njGuTJkQX7
+          W+2m1sV3d7oQc8hlQZoPIES2x6IFYbfSXXLbpvPTUGpFmVKDMV/z1ra1q+Ks/yrZ
+          j1poz3YJ4+Ed3sOnv5hjfy9k7Ed2PaFDxUDu3nSZY8dfx5EjqhAj06uXG5Uc8uqj
+          +Sn4XLsl7GKQGUfRcXfwboS9xpS4rHKwagWP89bxf+jM5kJLPDBqYgVpXro660Os
+          MWZmrxA9u/RTgnlZjKIroJUCAwEAAQ==
+          -----END PUBLIC KEY-----
+        claim_validator:
+          issuer:
+            valid_issuers:
+              - "http://localhost:9000/application/o/platform-admin/"
+        set_userinfo_header: true
+        set_id_token_header: false
+        set_access_token_header: false
+      elasticsearch-logger:
+        endpoint_addr: http://base-elasticsearch:9200
+        field: { index: ai-usage }
+        auth: { username: elastic, password: "E&9xV2#pM7@zQ4!y" }
+        include_req_body: true
+        include_resp_body: true
+        batch_max_size: 100
+        inactive_timeout: 5
+        buffer_duration: 30
